@@ -43,7 +43,7 @@ Falta de soluções acessíveis e integradas para tradução automática de arqu
 O sistema oferece uma interface simples onde o usuário faz o upload de documentos e recebe versões traduzidas automaticamente. O sistema manterá o layout do original sempre que possível.
 
 ### 2.4 Declaração de Posição do Produto
-Para empresas e instituições que trabalham com documentos multilíngues, que necessitam traduzir rapidamente conteúdos técnicos ou administrativos, o **TradutorDoc** é um serviço web de tradução automática de arquivos que agiliza o processo mantendo qualidade, padronização e produtividade.
+Para empresas e instituições que trabalham com documentos multilíngues, que necessitam traduzir rapidamente conteúdos técnicos ou administrativos, o **TraduDoc** é um serviço web de tradução automática de arquivos que agiliza o processo mantendo qualidade, padronização e produtividade.
 
 ---
 
@@ -70,8 +70,8 @@ Para empresas e instituições que trabalham com documentos multilíngues, que n
 
 ### 3.4 Ambiente Operacional
 - Navegador Web (Chrome, Firefox)  
-- Backend e banco de dados em AWS  
-- Mobile App como facilitador adicional (opcional)  
+- Backend e banco de dados  
+- Mobile App
 
 ---
 
@@ -150,5 +150,4 @@ O sistema será desenvolvido do zero, com backend, frontend web e aplicação mo
 
 ## 10. Apêndices
 - Link do Desafio SENAI - [LabWare](https://plataforma.gpinovacao.senai.br/plataforma/demandas-da-industria/interna/11121)  
-- Glossário com termos técnicos de tradução e tecnologia (a ser adicionado)  
-- Wireframes ou fluxos iniciais (Figma - a serem entregues em 22/08)  
+- Wireframes ou fluxos iniciais (Figma - a serem entregues em 22/08)
