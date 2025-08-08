@@ -1,10 +1,13 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    SECRET_KEY: str = "sua-chave-secreta-aqui"  # Gere uma chave segura (ex.: openssl rand -hex 32)
-    ALGORITHM: str = "HS256"
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"  
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:senha123@localhost:5432/auth_login_db"
+    DATABASE_URL: str
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str
+    GOOGLE_REDIRECT_URI: str
 
     class Config:
         env_file = ".env"

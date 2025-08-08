@@ -1,3 +1,4 @@
+from fastapi.security import OAuth2AuthorizationCodeBearer
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
@@ -5,6 +6,13 @@ from app.core.config import settings
 
 # Configuração para hash de senhas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Configuração do OAuth2 para Google
+oauth2_scheme = OAuth2AuthorizationCodeBearer(
+    authorizationUrl="https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl="https://oauth2.googleapis.com/token",
+    scopes={"openid": "OpenID", "email": "Email", "profile": "Profile"},
+)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
