@@ -149,5 +149,6 @@ O sistema será desenvolvido do zero, com backend, frontend web e aplicação mo
 ---
 
 ## 10. Apêndices
-- Link do Desafio SENAI - [LabWare](https://plataforma.gpinovacao.senai.br/plataforma/demandas-da-industria/interna/11121)  
+- Link do Desafio SENAI - [LabWare](https://plataforma.gpinovacao.senai.br/plataforma/demandas-da-industria/interna/11121)
+- Link do Figma - [Figma](https://www.figma.com/design/Yomqxzx9faQlRf6rXEid1H/Projeto---4%C2%B0-Semestre?node-id=0-1&p=f&t=dwrobzGKlHl0qMhz-0)
 - Wireframes ou fluxos iniciais (Figma - a serem entregues em 22/08)
