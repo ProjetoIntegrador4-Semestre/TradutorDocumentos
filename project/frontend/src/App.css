@@ -2,59 +2,86 @@ body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f4f4f4;
+  background-color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
 }
 
 .container {
-  max-width: 600px;
-  margin: 50px auto;
+  width: 100%;
+  max-width: 400px;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  border: 1px solid #ccc; 
+  border-radius: 10px; 
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
 }
 
-h2 {
-  text-align: center;
+.description {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.5;
 }
 
 .form-group {
   margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
+  text-align: left;
 }
 
 .form-group input {
   width: 100%;
-  padding: 8px;
+  padding: 12px 10px;
+  height: 48px; 
   border: 1px solid #ccc;
   border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box; 
+}
+
+.form-group input[type="password"] {
+  padding-right: 40px; 
 }
 
 button {
   width: 100%;
-  padding: 10px;
-  background-color: #007bff;
+  padding: 12px;
+  background-color: #1a73e8;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+  height: 48px;
 }
 
 button:hover {
-  background-color: #0056b3;
+  background-color: #1557b0;
 }
 
 .google-btn {
-  background-color: #db4437;
-  margin-top: 10px;
+  background-color: #fff;
+  color: #757575;
+  border: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 10px;
+  box-sizing: border-box;
 }
 
 .google-btn:hover {
-  background-color: #c1351d;
+  background-color: #f5f5f5;
+}
+
+.google-btn img {
+  width: 18px;
+  height: 18px;
 }
 
 .error {
@@ -69,23 +96,36 @@ button:hover {
   margin-bottom: 10px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
+.or {
+  color: #666;
+  text-align: center;
+  margin: 15px 0;
+  position: relative;
 }
 
-th, td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
+.or::before,
+.or::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: #ccc;
 }
 
-th {
-  background-color: #f0f0f0;
+.or::before {
+  left: 0;
 }
 
-select {
-  padding: 5px;
-  border-radius: 4px;
+.or::after {
+  right: 0;
+}
+
+.link {
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { register } from '../auth';
+import googleLogo from '../assets/google-logo.png'; // Add Google logo image
 
 function Register() {
   const [name, setName] = useState('');
@@ -29,49 +30,56 @@ function Register() {
   return (
     <div className="container">
       <h2>Cadastro</h2>
+      <p className="description">
+        Registre-se em poucos passos e tenha acesso a um serviço de tradução completo.
+      </p>
       {error && <p className="error">{error}</p>}
       {success && <p className="success">{success}</p>}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Nome</label>
           <input
             type="text"
+            placeholder="Insira seu nome..."
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
         </div>
         <div className="form-group">
-          <label>Email</label>
           <input
             type="email"
+            placeholder="Insira seu email..."
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
         <div className="form-group">
-          <label>Senha</label>
           <input
             type="password"
+            placeholder="Insira sua senha..."
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
         <div className="form-group">
-          <label>Confirmar Senha</label>
           <input
             type="password"
+            placeholder="Confirme sua senha..."
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
         </div>
-        <button type="submit">Cadastrar</button>
+        <button type="submit">FINALIZE SEU CADASTRO</button>
       </form>
+      <div className="or">ou</div>
+      <button className="google-btn" onClick={() => {}}>
+        <img src={googleLogo} alt="Google logo" /> LOGIN COM GOOGLE
+      </button>
       <p>
-        Já tem uma conta? <a href="/login">Faça login</a>
+        Já tem uma conta? <a href="/login" className="link">Faça login</a>
       </p>
     </div>
   );
