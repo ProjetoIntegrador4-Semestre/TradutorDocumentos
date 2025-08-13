@@ -21,3 +21,10 @@ System files
 Logs
 
 *.log
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+*.log
