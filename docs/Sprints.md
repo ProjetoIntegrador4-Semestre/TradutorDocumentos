@@ -1,8 +1,11 @@
 📅 Planejamento das Sprints – Projeto Tradutor de Documentos
-Sprint 1 – Proposta e Documento de Visão
+
+# Sprint 1 – Proposta e Documento de Visão
 
 📆 Período: até 11/08
+
 🎯 Objetivo: Estruturar o conceito do projeto e preparar o Documento de Visão.
+
 🔹 Atividades:
 
 Definir o problema e objetivo do sistema.
@@ -15,10 +18,12 @@ Configurar repositório no GitHub com branches e padrões de commit.
 
 Criar quadro no GitHub Projects com backlog inicial.
 
-Sprint 2 – Planejamento Detalhado e Protótipo
+# Sprint 2 – Planejamento Detalhado e Protótipo
 
 📆 Período: até 22/08
+
 🎯 Objetivo: Criar a base do projeto e protótipo.
+
 🔹 Atividades:
 
 Detalhar objetivo, público-alvo e modelo de negócio.
@@ -33,8 +38,10 @@ Preparar versão final do Documento de Visão + Protótipo.
 
 Sprint 3 – Backend Inicial + Mobile Estrutura
 
-📆 Período: 23/08 a 03/10 (entrega parcial)
+# 📆 Período: 23/08 a 03/10 (entrega parcial)
+
 🎯 Objetivo: Implementar a base funcional do sistema.
+
 🔹 Atividades:
 
 Implementar API de autenticação (JWT e OAuth).
@@ -49,10 +56,12 @@ Configurar CI/CD com GitHub Actions.
 
 Implantar backend inicial na AWS (ou similar).
 
-Sprint 4 – Funcionalidades Principais e Integração
+# Sprint 4 – Funcionalidades Principais e Integração
 
 📆 Período: 04/10 a novembro (antes do artigo)
+
 🎯 Objetivo: Garantir principais funcionalidades e segurança.
+
 🔹 Atividades:
 
 Implementar tradução automática (integração com API de tradução, ex: Google Translate, DeepL, Hugging Face).
@@ -67,10 +76,12 @@ Diagrama de classes e arquitetura geral.
 
 Testes iniciais de backend, frontend e mobile.
 
-Sprint 5 – Refinamento, Testes e Entrega Final
+# Sprint 5 – Refinamento, Testes e Entrega Final
 
 📆 Período: Novembro a 12/12
+
 🎯 Objetivo: Finalizar, testar e entregar com qualidade.
+
 🔹 Atividades:
 
 Implementar recursos avançados no mobile (ex: push notification para alertar conclusão da tradução).
