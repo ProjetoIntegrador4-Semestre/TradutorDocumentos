@@ -4,3 +4,7 @@ deep-translator
 python-multipart
 langdetect
 pydantic_settings
+python-docx
+python-pptx
+PyPDF2
+reportlab
