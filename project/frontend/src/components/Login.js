@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { login, getGoogleAuthUrl } from '../auth';
-import googleLogo from '../assets/google-logo.png'; // Add Google logo image
+import googleLogo from '../assets/google-logo.png'; 
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -20,7 +20,7 @@ function Login() {
     e.preventDefault();
     try {
       await login(email, password);
-      navigate('/tradutor');
+      navigate('/translator');
     } catch (err) {
       setError(err);
     }
@@ -36,42 +36,38 @@ function Login() {
   };
 
   return (
-    <div className="container">
+  <div className="auth-page">
+    <div className="auth-card">
       <h2>Login</h2>
       <p className="description">
         Faça login para traduzir seus documentos de forma rápida e segura. Com sua conta, você acompanha o progresso das traduções e tem acesso a todo o histórico de arquivos.
       </p>
+
       {error && <p className="error">{error}</p>}
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <input
-            type="email"
-            placeholder="Insira seu email..."
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <input type="email" placeholder="Insira seu email..." value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div className="form-group">
-          <input
-            type="password"
-            placeholder="Insira sua senha..."
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <input type="password" placeholder="Insira sua senha..." value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
-        <button type="submit">LOGIN</button>
+        <button className="btn" type="submit">LOGIN</button>
       </form>
+
       <div className="or">ou</div>
+
       <button className="google-btn" onClick={handleGoogleLogin}>
         <img src={googleLogo} alt="Google logo" /> LOGIN COM GOOGLE
       </button>
-      <p>
+
+      <p className="foot">
         Não tem uma conta? <a href="/register" className="link">Cadastre-se</a>
       </p>
     </div>
-  );
+  </div>
+);
+
 }
 
 export default Login;

@@ -29,7 +29,8 @@ function Register() {
   };
 
   return (
-    <div className="container">
+    <div className="auth-page">
+      <div className="auth-card">
       <h2>Cadastro</h2>
       <p className="description">
         Registre-se em poucos passos e tenha acesso a um serviço de tradução completo.
@@ -73,15 +74,18 @@ function Register() {
             required
           />
         </div>
-        <button type="submit">FINALIZE SEU CADASTRO</button>
+        <button className="btn" type="submit">FINALIZE SEU CADASTRO</button>
       </form>
+
       <div className="or">ou</div>
+      
       <button className="google-btn" onClick={() => (window.location.href = getGoogleAuthUrl())}>
         <img src={googleLogo} alt="Google logo" /> LOGIN COM GOOGLE
       </button>
-      <p>
+      <p className="foot">
         Já tem uma conta? <a href="/login" className="link">Faça login</a>
       </p>
+      </div>
     </div>
   );
 }

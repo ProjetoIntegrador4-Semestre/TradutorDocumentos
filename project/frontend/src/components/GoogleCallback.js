@@ -20,7 +20,7 @@ function GoogleCallback() {
     if (access) {
       setToken(access);
       if (refresh) setRefresh(refresh);
-      window.location.replace('/tradutor');
+      window.location.replace('/translator');
       return;
     }
 
