@@ -28,3 +28,5 @@ __pycache__/
 *.pyd
 
 *.log
+
+/Back-End/temp
