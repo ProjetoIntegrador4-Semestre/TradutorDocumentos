@@ -1,9 +1,16 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Register from './components/Register';
-import Dashboard from './components/Dashboard';
+import Dashboard from './components/Tradutor';
 import GoogleCallback from './components/GoogleCallback';
 import { getToken } from './auth';
+
+
+
+function PrivateRoute({ children }) {
+  const authed = !!getToken();
+  return authed ? children : <Navigate to="/login" replace />;
+}
 
 function App() {
   const isAuthenticated = !!getToken();
@@ -15,8 +22,8 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/auth/google/callback" element={<GoogleCallback />} />
         <Route
-          path="/dashboard"
-          element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}
+          path="/tradutor"
+          element={isAuthenticated ? <Tradutor /> : <Navigate to="/login" />}
         />
         <Route path="/" element={<Navigate to="/login" />} />
       </Routes>

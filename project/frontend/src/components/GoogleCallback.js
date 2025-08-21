@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { setToken } from '../auth';
+import { setToken, setRefresh } from '../auth';
 
 function GoogleCallback() {
   const navigate = useNavigate();
@@ -8,18 +8,27 @@ function GoogleCallback() {
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);
-    const token = query.get('token');
+    const access = query.get('token');
+    const refresh = query.get('refresh');
+    const error = query.get('error');
 
-    if (token) {
-      setToken(token);
-      navigate('/dashboard', { replace: true });
-    } else {
-      navigate('/login', { state: { error: 'Falha na autenticação com Google' }, replace: true });
+    if (error) {
+      navigate('/login', { state: { error: `Erro na autenticação com Google: ${decodeURIComponent(error)}` }, replace: true });
+      return;
     }
+
+    if (access) {
+      setToken(access);
+      if (refresh) setRefresh(refresh);
+      window.location.replace('/tradutor');
+      return;
+    }
+
+    navigate('/login', { state: { error: 'Falha na autenticação com Google: Token não encontrado' }, replace: true });
   }, [location, navigate]);
 
   return (
-    <div className="container">
+    <div className="auth-container">
       <h2>Processando login...</h2>
       <p>Aguarde enquanto autenticamos sua conta.</p>
     </div>

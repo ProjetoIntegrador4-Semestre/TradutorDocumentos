@@ -20,7 +20,7 @@ function Login() {
     e.preventDefault();
     try {
       await login(email, password);
-      navigate('/dashboard');
+      navigate('/tradutor');
     } catch (err) {
       setError(err);
     }

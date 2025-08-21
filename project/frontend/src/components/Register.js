@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { register } from '../auth';
 import googleLogo from '../assets/google-logo.png'; // Add Google logo image
+import { getGoogleAuthUrl } from '../auth';
 
 function Register() {
   const [name, setName] = useState('');
@@ -75,7 +76,7 @@ function Register() {
         <button type="submit">FINALIZE SEU CADASTRO</button>
       </form>
       <div className="or">ou</div>
-      <button className="google-btn" onClick={() => {}}>
+      <button className="google-btn" onClick={() => (window.location.href = getGoogleAuthUrl())}>
         <img src={googleLogo} alt="Google logo" /> LOGIN COM GOOGLE
       </button>
       <p>
