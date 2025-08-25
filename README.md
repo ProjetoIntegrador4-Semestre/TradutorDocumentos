@@ -141,7 +141,41 @@ O sistema será desenvolvido do zero, com backend, frontend web e aplicação mo
 
 ---
 
-## 9. Cronograma de Marcos
+## 9. Possivel diagrama de serviços da nuvem
+
+
+```mermaid
+flowchart LR
+  U[Usuario Browser] -->|HTTP/HTTPS| S3FE[S3 - Static Website React]
+  U -->|HTTPS API| ALB[Application Load Balancer]
+
+  subgraph VPC
+    ALB --> ECSAPI[ECS Fargate - API FastAPI]
+    ECSAPI -->|SQL| RDS[(RDS - Postgres)]
+    ECSAPI -->|URLs pre-assinadas| S3DOCS[(S3 - Documentos)]
+    ECSAPI -->|Enfileira job| SQS[SQS - Fila]
+
+    ECSWORK[ECS Fargate - Worker] -->|Consome| SQS
+    ECSWORK -->|Baixa/Sobe| S3DOCS
+    ECSWORK -->|Atualiza| RDS
+    ECSWORK -->|OCR opcional| TEX[Textract]
+  end
+
+  ECSAPI -->|Logs| CW[CloudWatch Logs]
+  ECSWORK -->|Logs| CW
+  ECR[(ECR - Imagens)] -.-> ECSAPI
+  ECR -.-> ECSWORK
+
+  classDef compute fill:#dff6ed,stroke:#89a;
+  classDef data fill:#f6eaff,stroke:#89a;
+  classDef integ fill:#eef6ff,stroke:#89a;
+  class ECSAPI,ECSWORK compute;
+  class RDS,S3DOCS,ECR data;
+  class SQS,TEX integ;
+
+```
+
+## 10. Cronograma de Marcos
 
 | Entrega | Descrição                            | Data     | Peso |
 |---------|--------------------------------------|----------|------|
@@ -152,7 +186,7 @@ O sistema será desenvolvido do zero, com backend, frontend web e aplicação mo
 
 ---
 
-## 10. Apêndices
+## 11. Apêndices
 - Link do Desafio SENAI - [LabWare](https://plataforma.gpinovacao.senai.br/plataforma/demandas-da-industria/interna/11121)
 - Link do Figma - [Figma](https://www.figma.com/design/Yomqxzx9faQlRf6rXEid1H/Projeto---4%C2%B0-Semestre?node-id=0-1&p=f&t=dwrobzGKlHl0qMhz-0)
 - Link do Modelo de Negócio - [Modelo de Negócio](docs/BusinessModel.png)
