@@ -1,4 +1,3 @@
-# app/routes/routes_translation.py
 from __future__ import annotations
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends

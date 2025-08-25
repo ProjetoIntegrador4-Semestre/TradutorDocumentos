@@ -9,3 +9,7 @@ python-pptx
 PyPDF2
 reportlab
 sqlalchemy
+psycopg[binary]
+alembic
+python-dotenv
+reportlab

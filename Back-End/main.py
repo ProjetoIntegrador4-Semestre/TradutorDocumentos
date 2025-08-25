@@ -6,8 +6,6 @@ from app.models.entities import Base
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
-# Só para DEV/TESTE: cria as tabelas automaticamente
-Base.metadata.create_all(bind=engine)
 
 app.include_router(routes_translation.router, prefix="/api", tags=["Translation"])
 
