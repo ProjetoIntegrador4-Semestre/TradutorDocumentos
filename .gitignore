@@ -30,3 +30,5 @@ __pycache__/
 *.log
 
 /Back-End/temp
+
+/Back-End/.env
