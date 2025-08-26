@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Response, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from pathlib import Path
@@ -14,7 +14,6 @@ from app.services.generator import generate_file
 
 # ORM do teste (SQLite/Postgres)
 from app.models.entities import TranslationRecord
-# Schema Pydantic de saída para /records
 from app.models.records import TranslationRecordOut
 
 router = APIRouter()
@@ -112,3 +111,12 @@ def list_records(db: Session = Depends(get_db)):
         .all()
     )
     return rows
+
+@router.delete("/records/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_record(record_id: int, db: Session = Depends(get_db)):
+    rec = db.get(TranslationRecord, record_id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Registro não encontrado.")
+    db.delete(rec)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
