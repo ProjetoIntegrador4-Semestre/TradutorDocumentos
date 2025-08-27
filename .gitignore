@@ -29,4 +29,7 @@ __pycache__/
 
 *.log
 
-/Back-End/temp
+/Back-End/temp/*
+
+/Back-End/.env
+!Back-End/temp/.gitkeep
