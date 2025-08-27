@@ -6,7 +6,8 @@ import React from "react";
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      {/* ⬇️ só top; sem aplicar espaço extra no bottom */}
+      <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#fff" }}>
         <Stack screenOptions={{ headerShown: false }} />
       </SafeAreaView>
     </AuthProvider>
