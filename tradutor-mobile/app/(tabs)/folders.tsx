@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, FlatList, Alert } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, Alert, StyleSheet } from "react-native";
 import TopGreeting from "../../components/TopGreeting";
 import CreateFolderSheet from "../../components/CreateFolderSheet";
 import FolderCard from "../../components/FolderCard";
+import { theme } from "../../constants/theme";
 
 type Folder = { id: string; name: string; owner: string; created_at: string };
 
@@ -33,28 +34,28 @@ export default function Folders() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#e9e9ea" }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
       <TopGreeting />
-      <View style={{ padding: 16, rowGap: 12 }}>
-        <TouchableOpacity style={{ alignSelf: "center", paddingVertical: 6, paddingHorizontal: 18, backgroundColor: "#fff", borderRadius: 12 }}>
-          <Text>Pastas</Text>
-        </TouchableOpacity>
 
-        <View style={{ backgroundColor: "#fff", borderRadius: 10, padding: 12 }}>
-          <Text style={{ color: "#2b64ff", marginBottom: 6 }}>Armazenamento Disponível</Text>
-          <View style={{ height: 8, backgroundColor: "#e5e5e5", borderRadius: 6, overflow: "hidden" }}>
-            <View style={{ width: "10%", backgroundColor: "#2b64ff", height: 8 }} />
-          </View>
-          <Text style={{ color: "#666", marginTop: 4 }}>0,5 GB de 5 GB usados</Text>
+      <View style={{ padding: theme.spacing, rowGap: 12 }}>
+        <View style={styles.headerChip}>
+          <Text style={{ color: theme.colors.text, fontWeight: "700" }}>Pastas</Text>
         </View>
 
-        <View style={{ backgroundColor: "#fff", borderRadius: 10, padding: 12, rowGap: 10 }}>
-          <Text style={{ fontWeight: "600" }}>Criar nova pasta</Text>
-          <TouchableOpacity
-            onPress={() => setSheetOpen(true)}
-            style={{ alignSelf: "flex-start", backgroundColor: "#2b64ff", borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14 }}
-          >
-            <Text style={{ color: "#fff", fontWeight: "600" }}>+ Nova pasta</Text>
+        {/* Armazenamento */}
+        <View style={styles.card}>
+          <Text style={{ color: theme.colors.primary, marginBottom: 6, fontWeight: "600" }}>Armazenamento Disponível</Text>
+          <View style={styles.progressTrack}>
+            <View style={styles.progressBar} />
+          </View>
+          <Text style={{ color: theme.colors.muted, marginTop: 4 }}>0,5 GB de 5 GB usados</Text>
+        </View>
+
+        {/* Criar nova pasta */}
+        <View style={styles.card}>
+          <Text style={{ fontWeight: "700", color: theme.colors.text, marginBottom: 8 }}>Criar nova pasta</Text>
+          <TouchableOpacity onPress={() => setSheetOpen(true)} style={styles.cta}>
+            <Text style={styles.ctaText}>+ Nova pasta</Text>
           </TouchableOpacity>
         </View>
 
@@ -76,3 +77,45 @@ export default function Folders() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+  },
+  headerChip: {
+    alignSelf: "center",
+    backgroundColor: theme.colors.surface,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+  },
+  progressTrack: {
+    height: 8,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  progressBar: {
+    width: "10%",
+    height: 8,
+    backgroundColor: theme.colors.primary,
+  },
+  cta: {
+    alignSelf: "flex-start",
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  ctaText: {
+    color: theme.colors.primaryText,
+    fontWeight: "700",
+  },
+});

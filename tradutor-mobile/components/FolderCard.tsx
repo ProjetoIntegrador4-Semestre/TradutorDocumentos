@@ -1,28 +1,91 @@
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { theme } from "../constants/theme"; 
 
-export default function FolderCard({
-  folder, onShare, onDelete
-}: { folder: { id: string; name: string; owner: string; created_at: string }; onShare: () => void; onDelete: () => void }) {
+type Props = {
+  folder: { id: string; name: string; owner: string; created_at: string };
+  onShare: () => void;
+  onDelete: () => void;
+};
+
+export default function FolderCard({ folder, onShare, onDelete }: Props) {
+  const date = new Date(folder.created_at).toLocaleDateString();
+
   return (
-    <View style={{
-      backgroundColor: "#fff", borderRadius: 8, padding: 12, marginBottom: 8,
-      flexDirection: "row", justifyContent: "space-between", alignItems: "center"
-    }}>
-      <View>
-        <Text style={{ fontWeight: "600" }}>📁 {folder.name}</Text>
-        <Text style={{ color: "#666" }}>
-          User: {folder.owner} • {new Date(folder.created_at).toLocaleDateString()}
-        </Text>
+    <View style={styles.card}>
+      <View style={styles.info}>
+        <Text numberOfLines={1} style={styles.title}>📁 {folder.name}</Text>
+        <Text style={styles.meta}>User: {folder.owner} • {date}</Text>
       </View>
-      <View style={{ flexDirection: "row", columnGap: 12 }}>
-        <TouchableOpacity onPress={onShare} style={{ paddingVertical: 8, paddingHorizontal: 10, borderRadius: 6, backgroundColor: "#eee" }}>
-          <Text>Compartilhar</Text>
+
+     
+      <View style={styles.actions}>
+        <TouchableOpacity onPress={onShare} style={[styles.btn, styles.btnGhost, { marginRight: 8 }]}>
+          <Text style={styles.btnGhostText}>Compartilhar</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={onDelete} style={{ paddingVertical: 8, paddingHorizontal: 10, borderRadius: 6, backgroundColor: "#d82626" }}>
-          <Text style={{ color: "#fff" }}>Excluir</Text>
+
+        <TouchableOpacity onPress={onDelete} style={[styles.btn, styles.btnDanger]}>
+          <Text style={styles.btnDangerText}>Excluir</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  info: {
+    flex: 1,       
+    minWidth: 0,   
+    paddingRight: 8,
+  },
+  title: {
+    color: theme.colors.text,
+    fontWeight: "700",
+    marginBottom: 4,
+    fontSize: 14,         
+  },
+  meta: {
+    color: theme.colors.muted,
+    fontSize: 12,
+  },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,         
+  },
+  btn: {
+    paddingVertical: 6,    
+    paddingHorizontal: 8, 
+    borderRadius: 8,
+    borderWidth: 1,
+    minHeight: 32,
+  },
+  btnGhost: {
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.border,
+  },
+  btnGhostText: {
+    color: theme.colors.text,
+    fontWeight: "600",
+    fontSize: 12,
+  },
+  btnDanger: {
+    backgroundColor: "#EF4444",
+    borderColor: "#EF4444",
+  },
+  btnDangerText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 12,
+  },
+});
