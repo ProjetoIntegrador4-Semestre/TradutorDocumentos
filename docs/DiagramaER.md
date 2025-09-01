@@ -1,4 +1,6 @@
+## ERD
 
+```mermaid
 erDiagram
   USERS {
     int id PK
@@ -18,4 +20,5 @@ erDiagram
     timestamptz created_at
   }
 
-  USERS ||--o{ TRANSLATION_RECORDS : owns
+  USERS ||--o{ TRANSLATION_RECORDS : "owns"
+```
