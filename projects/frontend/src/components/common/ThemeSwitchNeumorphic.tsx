@@ -3,10 +3,10 @@ import Switch from "@mui/material/Switch";
 
 const ThemeSwitchNeumorphic = styled(Switch)(({ theme }) => ({
   width: 60,
-  height: 32,
+  height: 33,
   padding: 4,
   "& .MuiSwitch-switchBase": {
-    padding: 2,
+    padding: 4.2,
     "&.Mui-checked": {
       transform: "translateX(28px)",
       color: "#fff",
@@ -18,8 +18,8 @@ const ThemeSwitchNeumorphic = styled(Switch)(({ theme }) => ({
   },
   "& .MuiSwitch-thumb": {
     backgroundColor: "#fff",
-    width: 24,
-    height: 24,
+    width: 24.5,
+    height: 24.5,
     borderRadius: "50%",
     boxShadow: "0 3px 6px rgba(0,0,0,0.25)",
   },

@@ -4,6 +4,7 @@ import TranslatorPage from "./pages/TranslatorPage";
 import HistoryPage from "./pages/HistoryPage";
 import FoldersPage from "./pages/FoldersPage";
 import SettingsPage from "./pages/SettingsPage";
+//import Login from "./pages/Login";
 
 export default function App() {
   return (
