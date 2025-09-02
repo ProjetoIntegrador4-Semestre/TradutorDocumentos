@@ -53,6 +53,8 @@ Estruturar banco de dados (armazenar usuários, histórico de traduções).
 
 Desenvolver tela inicial no mobile (login, upload básico de documento).
 
+Desenvolver telas iniciais Front-End
+
 Configurar CI/CD com GitHub Actions.
 
 
