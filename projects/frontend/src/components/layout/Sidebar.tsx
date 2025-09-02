@@ -59,7 +59,7 @@ export default function Sidebar() {
 
       <Button
         variant="contained"
-        color="error"
+        
         startIcon={<LogoutIcon />}
         onClick={handleLogout}
         fullWidth

@@ -1,12 +1,26 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import TranslatorPage from "./pages/TranslatorPage";
 import HistoryPage from "./pages/HistoryPage";
 import FoldersPage from "./pages/FoldersPage";
 import SettingsPage from "./pages/SettingsPage";
-//import Login from "./pages/Login";
+import LoginPage from "../src/pages/LoginPage"
+import RegisterPage from "../src/pages/RegisterPage";
 
 export default function App() {
+  const { pathname } = useLocation();
+  const isAuth = pathname.startsWith("/login") || pathname.startsWith("/cadastro");
+
+  if (isAuth) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/cadastro" element={<RegisterPage />} />
+        <Route path="*" element={<Navigate to="/login" />} />
+      </Routes>
+    );
+  }
+
   return (
     <AppShell>
       <Routes>

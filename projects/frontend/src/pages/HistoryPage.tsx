@@ -64,7 +64,7 @@ export default function HistoryPage() {
 
           <Chip
             icon={<SortIcon />}
-            label={sort === "newest" ? "Mais recentes" : "Mais antigos"}
+            label={sort === "newest" ? "Mais recentes" : "Mais antigos"}  
             onClick={() => setSort(s => (s === "newest" ? "oldest" : "newest"))}
             variant="outlined"
           />

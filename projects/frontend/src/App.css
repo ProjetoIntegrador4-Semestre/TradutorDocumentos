@@ -1,42 +1,179 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* 1) ocupa a altura toda e centraliza o card */
+.auth-page {
+  min-height: 100dvh;
+  /* usa altura real da viewport em mobile moderno */
+  min-height: 100vh;
+  /* fallback */
+  display: grid;
+  place-items: center;
+  /* centraliza vertical e horizontal */
+  padding: 24px;
+  /* respiro nas bordas em telas pequenas */
+  background: #f6f7fb;
+  /* cor de fundo (opcional) */
+}
+
+/* 2) o card em si */
+.auth-card {
+  width: min(92vw, 560px);
+  /* responsivo: nunca passa de 560px, ocupa até 92% em telas pequenas */
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .06);
+}
+
+/* títulos e textos */
+.auth-card h2 {
+  margin: 0 0 12px 0;
   text-align: center;
+  color: #a4aab8;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.auth-card .description {
+  margin: 0 auto 18px;
+  color: #6b7280;
+  text-align: center;
+  max-width: 46ch;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* formulário */
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
+}
+
+/* botões */
+.btn {
+  width: 100%;
+  height: 44px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
+/* separador "ou" com linhas laterais */
+.or {
+  margin: 16px 0;
+  position: relative;
+  text-align: center;
+  color: #9ca3af;
+}
+
+.or::before,
+.or::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.or::before {
+  left: 0;
+}
+
+.or::after {
+  right: 0;
+}
+
+/* botão Google */
+.google-btn {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.google-btn img {
+  width: 18px;
+  height: 18px;
+}
+
+/* rodapé do card */
+.foot {
+  text-align: center;
+  margin-top: 14px;
+  color: #6b7280;
+}
+
+.link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* mensagens */
+.error {
+  color: #b91c1c;
+  text-align: center;
+  margin: 0 0 10px;
+}
+
+.success {
+  color: #16a34a;
+  text-align: center;
+  margin: 0 0 10px;
+}
+
+/* 3) pequenos ajustes para mobile */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 18px;
+    border-radius: 12px;
   }
-  to {
-    transform: rotate(360deg);
+
+  .google-btn,
+  .btn {
+    height: 42px;
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
