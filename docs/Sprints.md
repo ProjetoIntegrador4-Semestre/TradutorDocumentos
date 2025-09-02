@@ -72,7 +72,11 @@ Criar relatórios de segurança.
 
 Diagrama de classes e arquitetura geral.
 
+Finalização do Front-End e Back-End
+
 Testes iniciais de integração entre backend, frontend e mobile.
+
+Subir projeto na AWS 
 
 # Sprint 5 – Refinamento, Testes e Entrega Final
 
