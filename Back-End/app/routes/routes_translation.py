@@ -7,6 +7,11 @@ from pathlib import Path
 import os
 import traceback
 
+from app.services.auth import get_current_user, require_admin
+from app.models.entities import User, TranslationRecord
+from fastapi import Query
+
+
 from app.db import get_db
 from app.services.translator import translate_text
 from app.services.extractor import extract_text
@@ -46,6 +51,7 @@ async def translate_file(
     file: UploadFile = File(...),
     target_lang: str = Form(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Recebe um DOCX/PPTX/PDF, extrai texto, traduz e retorna o arquivo traduzido para download.
@@ -80,6 +86,7 @@ async def translate_file(
             file_type=infer_file_type(original_name),
             detected_lang=result.get("detected_lang"),
             target_lang=target_lang,
+            user_id=current_user.id,
         )
         db.add(rec)
         db.commit()
@@ -103,17 +110,27 @@ async def translate_file(
         raise HTTPException(status_code=400, detail=f"Falha ao processar arquivo: {e}")
 
 @router.get("/records", response_model=list[TranslationRecordOut])
-def list_records(db: Session = Depends(get_db)):
-    rows = (
-        db.query(TranslationRecord)
-        .order_by(TranslationRecord.id.desc())
-        .limit(20)
-        .all()
-    )
+def list_records(
+    mine: bool = True,                      
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = db.query(TranslationRecord).order_by(TranslationRecord.id.desc())
+
+    if mine:
+        q = q.filter(TranslationRecord.user_id == current_user.id)
+    else:
+        # só admin pode ver tudo
+        if current_user.role != "admin":
+            raise HTTPException(403, "Somente admin pode listar todos os registros.")
+
+    rows = q.offset(offset).limit(limit).all()
     return rows
 
 @router.delete("/records/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_record(record_id: int, db: Session = Depends(get_db)):
+def delete_record(record_id: int, db: Session = Depends(get_db), _: User = Depends(require_admin)):
     rec = db.get(TranslationRecord, record_id)
     if not rec:
         raise HTTPException(status_code=404, detail="Registro não encontrado.")
