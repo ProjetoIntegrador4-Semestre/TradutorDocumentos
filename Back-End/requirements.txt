@@ -13,3 +13,10 @@ psycopg[binary]
 alembic
 python-dotenv
 reportlab
+python-jose[cryptography]
+passlib[bcrypt]
+email-validator
+authlib
+google-auth
+httpx
+itsdangerous
