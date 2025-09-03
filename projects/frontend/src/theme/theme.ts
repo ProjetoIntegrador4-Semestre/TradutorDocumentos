@@ -7,9 +7,10 @@ export const getDesignTokens = (mode: "light" | "dark") =>
       primary: { main: "#1976D2" },
       secondary: { main: "#00BFA6" },
       background: {
-        default: mode === "light" ? "#ECEFF1" : "#0F172A",  
-        paper: mode === "light" ? "#FDFDFD" : "#121826",     
+        default: mode === "light" ? "#ECEFF1" : "#0F172A",
+        paper: mode === "light" ? "#FFFFFF" : "#121826",
       },
+
       text: {
         primary: mode === "light" ? "#1E293B" : "#E2E8F0",
         secondary: mode === "light" ? "#475569" : "#94A3B8",
@@ -21,7 +22,7 @@ export const getDesignTokens = (mode: "light" | "dark") =>
         styleOverrides: {
           root: {
             borderRadius: 16,
-            border: mode === "light" ? "1px solid #D0D7DE" : "none",
+            border: mode === "light" ? "1px solid #94A3B8" : "none",
             boxShadow: mode === "light" ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
           },
         },

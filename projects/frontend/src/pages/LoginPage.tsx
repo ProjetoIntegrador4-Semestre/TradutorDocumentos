@@ -42,7 +42,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <button className="btn" type="submit">Entrar</button>
+          <button className="btn" onClick={() => nav("/tradutor")} type="submit">Entrar</button>
         </form>
 
         <div className="or">ou</div>
