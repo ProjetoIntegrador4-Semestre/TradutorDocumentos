@@ -1,0 +1,35 @@
+Python virtual environment
+
+/Back-End/venv/
+
+Byte-compiled / optimized / DLL files
+
+pycache/ *.py[cod] *$py.class
+
+Distribution / packaging
+
+.Python build/ dist/ *.egg-info/ *.egg
+
+IDEs and editors
+
+.vscode/ .idea/ *.sublime-project *.sublime-workspace
+
+System files
+
+.DS_Store Thumbs.db
+
+Logs
+
+*.log
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+*.log
+
+/Back-End/temp/*
+
+/Back-End/.env
+!Back-End/temp/.gitkeep
