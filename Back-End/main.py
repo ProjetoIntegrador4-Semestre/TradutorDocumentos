@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 from app.routes import routes_translation
 import os
 from app.db import engine
@@ -10,7 +11,7 @@ from app.config.settings import settings
 
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "Translation API")
-app = FastAPI(title=PROJECT_NAME)
+app = FastAPI(title=PROJECT_NAME, swagger_ui_parameters={"persistAuthorization": True},)
 
 app.add_middleware(
     SessionMiddleware,
@@ -20,10 +21,23 @@ app.add_middleware(
 )
 
 app.include_router(routes_auth.router)
-app.include_router(routes_translation.router, prefix="/api", tags=["Translation"])
+app.include_router(routes_translation.router, tags=["Translation"])
 app.include_router(routes_auth_google.router)
-
 
 @app.get("/")
 def home():
     return {"message": "Translation API is running!"}
+
+
+def add_bearer_to_openapi(app: FastAPI):
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+        schema["security"] = [{"HTTPBearer": []}]
+        app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
+
+add_bearer_to_openapi(app)
