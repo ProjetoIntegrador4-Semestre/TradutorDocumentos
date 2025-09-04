@@ -18,7 +18,6 @@ from app.services.extractor import extract_text
 from app.services.generator import generate_file
 
 # ORM do teste (SQLite/Postgres)
-from app.models.entities import TranslationRecord
 from app.models.records import TranslationRecordOut
 
 router = APIRouter()
