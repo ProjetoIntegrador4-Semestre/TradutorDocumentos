@@ -1,14 +1,17 @@
+
 import React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { theme } from "../../constants/theme"; 
+import { useTheme } from "../../context/ThemeContext";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const bottomPad = Platform.OS === "ios" ? Math.max(8, insets.bottom) : 8;
+  const { theme } = useTheme();
+
   const baseHeight = 56;
+  const bottomPad = Platform.OS === "ios" ? Math.max(8, insets.bottom) : 8;
 
   return (
     <Tabs

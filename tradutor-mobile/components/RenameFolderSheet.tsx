@@ -1,37 +1,76 @@
+
 import React, { useEffect, useState } from "react";
 import { Modal, View, Text, TextInput, TouchableOpacity, Pressable } from "react-native";
-import { theme } from "../constants/theme";
+import { useTheme } from "../context/ThemeContext";
 
-export default function RenameFolderSheet({
-  visible, initialName, onClose, onConfirm
-}: {
+type Props = {
   visible: boolean;
   initialName: string;
   onClose: () => void;
   onConfirm: (newName: string) => void;
-}) {
+};
+
+export default function RenameFolderSheet({ visible, initialName, onClose, onConfirm }: Props) {
+  const { theme } = useTheme();
   const [name, setName] = useState(initialName);
-  useEffect(() => { setName(initialName); }, [initialName]);
+
+  useEffect(() => setName(initialName), [initialName]);
 
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
-      <Pressable style={{ flex:1, backgroundColor:"rgba(0,0,0,0.3)" }} onPress={onClose}>
-        <View style={{ marginTop:"auto", backgroundColor:"#fff", borderTopLeftRadius:16, borderTopRightRadius:16, padding:16, gap:10 }}>
-          <View style={{ width:36, height:4, alignSelf:"center", borderRadius:2, backgroundColor:"#ddd", marginBottom:4 }} />
-          <Text style={{ fontWeight:"700", fontSize:16, color:theme.colors.text }}>Renomear pasta</Text>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }} onPress={onClose}>
+        <View
+          style={{
+            marginTop: "auto",
+            backgroundColor: theme.colors.surface,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              width: 36,
+              height: 4,
+              alignSelf: "center",
+              borderRadius: 2,
+              backgroundColor: theme.colors.border,
+              marginBottom: 10,
+            }}
+          />
+          <Text style={{ fontWeight: "700", fontSize: 16, color: theme.colors.text, marginBottom: 8 }}>
+            Renomear pasta
+          </Text>
+
           <TextInput
             placeholder="Novo nome"
             value={name}
             onChangeText={setName}
-            style={{ borderWidth:1, borderColor:theme.colors.border, borderRadius:8, padding:10, backgroundColor:"#fff" }}
+            placeholderTextColor={theme.colors.muted}
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              borderRadius: 8,
+              padding: 10,
+              backgroundColor: theme.colors.surface,
+              color: theme.colors.text,
+            }}
           />
-          <View style={{ flexDirection:"row", justifyContent:"flex-end", gap:10 }}>
-            <TouchableOpacity onPress={onClose}><Text>Cancelar</Text></TouchableOpacity>
+
+          <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 12 }}>
+            <TouchableOpacity onPress={onClose} style={{ paddingVertical: 10, paddingHorizontal: 12, marginRight: 8 }}>
+              <Text style={{ color: theme.colors.text }}>Cancelar</Text>
+            </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => { onConfirm(name.trim()); }}
-              style={{ backgroundColor:theme.colors.primary, borderRadius:8, paddingVertical:10, paddingHorizontal:14 }}
+              onPress={() => onConfirm(name.trim())}
+              style={{
+                backgroundColor: theme.colors.primary,
+                borderRadius: 8,
+                paddingVertical: 10,
+                paddingHorizontal: 14,
+              }}
             >
-              <Text style={{ color:"#fff", fontWeight:"700" }}>Salvar</Text>
+              <Text style={{ color: theme.colors.primaryText, fontWeight: "700" }}>Salvar</Text>
             </TouchableOpacity>
           </View>
         </View>

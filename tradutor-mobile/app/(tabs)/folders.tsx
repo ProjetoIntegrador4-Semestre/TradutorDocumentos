@@ -4,51 +4,29 @@ import TopGreeting from "../../components/TopGreeting";
 import CreateFolderSheet from "../../components/CreateFolderSheet";
 import RenameFolderSheet from "../../components/RenameFolderSheet";
 import FolderCard from "../../components/FolderCard";
-import { theme } from "../../constants/theme";
+import { useTheme } from "../../context/ThemeContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
-export type Folder = {
-  id: string;
-  name: string;
-  owner: string;
-  created_at: string;
-  children?: Folder[];
-};
-
+export type Folder = { id: string; name: string; owner: string; created_at: string; children?: Folder[] };
 
 function addChild(node: Folder, parentId: string, child: Folder): Folder {
   if (node.id === parentId) return { ...node, children: [child, ...(node.children ?? [])] };
   return { ...node, children: (node.children ?? []).map((c) => addChild(c, parentId, child)) };
 }
 function removeNode(node: Folder, id: string): Folder {
-  return {
-    ...node,
-    children: (node.children ?? [])
-      .filter((c) => c.id !== id)
-      .map((c) => removeNode(c, id)),
-  };
+  return { ...node, children: (node.children ?? []).filter((c) => c.id !== id).map((c) => removeNode(c, id)) };
 }
 function updateName(node: Folder, id: string, name: string): Folder {
   if (node.id === id) return { ...node, name };
   return { ...node, children: (node.children ?? []).map((c) => updateName(c, id, name)) };
 }
-function findById(node: Folder, id: string): Folder | null {
-  if (node.id === id) return node;
-  for (const c of node.children ?? []) { const f = findById(c, id); if (f) return f; }
-  return null;
-}
-function getFolderByPath(root: Folder, pathIds: string[]): Folder {
-  let cur = root;
-  for (let i = 1; i < pathIds.length; i++) cur = (cur.children ?? []).find((c) => c.id === pathIds[i]) ?? cur;
-  return cur;
-}
+function findById(node: Folder, id: string): Folder | null { if (node.id === id) return node; for (const c of node.children ?? []) { const f = findById(c, id); if (f) return f; } return null; }
+function getFolderByPath(root: Folder, pathIds: string[]): Folder { let cur = root; for (let i=1;i<pathIds.length;i++) cur=(cur.children??[]).find(c=>c.id===pathIds[i])??cur; return cur; }
 
+// confirm cross-platform
 function confirmDelete(message: string): Promise<boolean> {
-  if (Platform.OS === "web") {
-  
-    return Promise.resolve(window.confirm(message));
-  }
+  if (Platform.OS === "web") return Promise.resolve(window.confirm(message));
   return new Promise((resolve) => {
     Alert.alert("Confirmar", message, [
       { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
@@ -59,6 +37,7 @@ function confirmDelete(message: string): Promise<boolean> {
 
 export default function Folders() {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
 
   const [tree, setTree] = useState<Folder>({
     id: "root",
@@ -74,7 +53,6 @@ export default function Folders() {
       { id: "4", name: "Pasta 4", owner: "User", created_at: "2025-08-21", children: [] },
     ],
   });
-
   const [pathIds, setPathIds] = useState<string[]>(["root"]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -88,50 +66,39 @@ export default function Folders() {
     setTree((t) => addChild(t, pathIds[pathIds.length - 1], newF));
     setSheetOpen(false);
   }
-
-  function onShare(folder: Folder) { Alert.alert("Compartilhar", `Compartilhar a pasta “${folder.name}” (mock).`); }
-
-
+  function openFolder(id: string) { setPathIds((p) => [...p, id]); }
+  function goTo(levelIndex: number) { setPathIds((p) => p.slice(0, levelIndex + 1)); }
+  function onRename(newName: string) {
+    const trimmed = newName.trim(); if (!trimmed) return setRenameOpen(false);
+    setTree((t) => updateName(t, pathIds[pathIds.length - 1], trimmed));
+    setRenameOpen(false);
+  }
   async function onDelete(folder: Folder) {
     if (folder.id === "root") return;
     const ok = await confirmDelete(`Deseja realmente excluir a pasta “${folder.name}”?`);
     if (!ok) return;
-
-    // Se excluir a pasta em que estou, sobe um nível antes
-    if (pathIds[pathIds.length - 1] === folder.id) {
-      setPathIds((p) => p.slice(0, -1));
-    }
+    if (pathIds[pathIds.length - 1] === folder.id) setPathIds((p) => p.slice(0, -1));
     setTree((t) => removeNode(t, folder.id));
-  }
-
-  function openFolder(id: string) { setPathIds((p) => [...p, id]); }
-  function goTo(levelIndex: number) { setPathIds((p) => p.slice(0, levelIndex + 1)); }
-
-  function onRename(newName: string) {
-    const trimmed = newName.trim();
-    if (!trimmed) return setRenameOpen(false);
-    setTree((t) => updateName(t, pathIds[pathIds.length - 1], trimmed));
-    setRenameOpen(false);
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
       <TopGreeting />
 
-      <View style={{ padding: theme.spacing, rowGap: 12 }}>
-        <View style={styles.headerChip}><Text style={{ color: theme.colors.text, fontWeight: "700" }}>Pastas</Text></View>
+      <View style={{ padding: 16, rowGap: 12 }}>
+        <View style={[styles.headerChip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <Text style={{ color: theme.colors.text, fontWeight: "700" }}>Pastas</Text>
+        </View>
 
-        {/* Breadcrumb + ações da pasta atual */}
-        <View style={[styles.card, { gap: 10 }]}>
+        <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, gap: 10 }]}>
+          {/* Breadcrumb */}
           <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
             {pathIds.map((id, i) => {
               const f = findById(tree, id)!; const isLast = i === pathIds.length - 1;
               return (
                 <View key={id} style={{ flexDirection: "row", alignItems: "center" }}>
                   <TouchableOpacity disabled={isLast} onPress={() => goTo(i)}>
-                    <Text style={{ color: isLast ? theme.colors.text : theme.colors.primary, fontWeight: isLast ? "700" : "600" }}>
-                      {f.name}
-                    </Text>
+                    <Text style={{ color: isLast ? theme.colors.text : theme.colors.primary, fontWeight: isLast ? "700" : "600" }}>{f.name}</Text>
                   </TouchableOpacity>
                   {!isLast && <Text style={{ marginHorizontal: 6, color: theme.colors.muted }}>›</Text>}
                 </View>
@@ -139,6 +106,7 @@ export default function Folders() {
             })}
           </View>
 
+          {/* Ações da pasta atual */}
           {current.id !== "root" && (
             <View style={{ flexDirection: "row", gap: 8 }}>
               <TouchableOpacity onPress={() => setRenameOpen(true)} style={[styles.smallBtn, { borderColor: theme.colors.border }]}>
@@ -152,18 +120,18 @@ export default function Folders() {
         </View>
 
         {/* Armazenamento */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <Text style={{ color: theme.colors.primary, marginBottom: 6, fontWeight: "600" }}>Armazenamento Disponível</Text>
-          <View style={styles.progressTrack}><View style={styles.progressBar} /></View>
+          <View style={styles.progressTrack}><View style={[styles.progressBar, { backgroundColor: theme.colors.primary }]} /></View>
           <Text style={{ color: theme.colors.muted, marginTop: 4 }}>0,5 GB de 5 GB usados</Text>
         </View>
 
-        {/* Criar dentro da pasta atual */}
-        <View style={styles.card}>
+        {/* Criar dentro da atual */}
+        <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <Text style={{ fontWeight: "700", color: theme.colors.text, marginBottom: 8 }}>
             Criar nova pasta {current.id !== "root" ? `em “${current.name}”` : ""}
           </Text>
-          <TouchableOpacity onPress={() => setSheetOpen(true)} style={styles.cta}>
+          <TouchableOpacity onPress={() => setSheetOpen(true)} style={[styles.cta, { backgroundColor: theme.colors.primary }]}>
             <Text style={styles.ctaText}>+ Nova pasta</Text>
           </TouchableOpacity>
         </View>
@@ -177,11 +145,15 @@ export default function Folders() {
             <FolderCard
               folder={item}
               onOpen={() => openFolder(item.id)}
-              onShare={() => onShare(item)}
-              onDelete={() => onDelete(item)}  // ⬅️ passa o folder inteiro
+              onShare={() => Alert.alert("Compartilhar", `Compartilhar a pasta “${item.name}” (mock).`)}
+              onDelete={() => onDelete(item)}
             />
           )}
-          ListEmptyComponent={<View style={[styles.card, { alignItems: "center" }]}><Text style={{ color: theme.colors.muted }}>Sem subpastas aqui ainda.</Text></View>}
+          ListEmptyComponent={
+            <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, alignItems: "center" }]}>
+              <Text style={{ color: theme.colors.muted }}>Sem subpastas aqui ainda.</Text>
+            </View>
+          }
         />
       </View>
 
@@ -194,12 +166,10 @@ export default function Folders() {
             right: 16,
             bottom: 16 + insets.bottom + 60,
             backgroundColor: theme.colors.surface,
-            borderRadius: 24,
-            width: 48, height: 48,
+            borderRadius: 24, width: 48, height: 48,
             alignItems: "center", justifyContent: "center",
             borderWidth: 1, borderColor: theme.colors.border,
-            shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
-            elevation: 2,
+            shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
           }}
           accessibilityLabel="Voltar uma pasta"
         >
@@ -214,14 +184,11 @@ export default function Folders() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: theme.colors.surface, borderRadius: theme.radius, borderWidth: 1, borderColor: theme.colors.border, padding: 12 },
-  headerChip: {
-    alignSelf: "center", backgroundColor: theme.colors.surface, borderRadius: 999,
-    paddingVertical: 6, paddingHorizontal: 18, borderWidth: 1, borderColor: theme.colors.border,
-  },
+  card: { borderRadius: 12, borderWidth: 1, padding: 12 },
+  headerChip: { alignSelf: "center", borderRadius: 999, paddingVertical: 6, paddingHorizontal: 18, borderWidth: 1 },
   progressTrack: { height: 8, backgroundColor: "#E5E7EB", borderRadius: 6, overflow: "hidden" },
-  progressBar: { width: "10%", height: 8, backgroundColor: theme.colors.primary },
-  cta: { alignSelf: "flex-start", backgroundColor: theme.colors.primary, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 },
-  ctaText: { color: theme.colors.primaryText, fontWeight: "700" },
+  progressBar: { width: "10%", height: 8 },
+  cta: { alignSelf: "flex-start", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 },
+  ctaText: { color: "#fff", fontWeight: "700" },
   smallBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1 },
 });

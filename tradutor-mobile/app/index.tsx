@@ -1,8 +1,9 @@
-import { Redirect } from "expo-router";
+
 import React from "react";
+import { Redirect } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 
 export default function Index() {
-  const { user } = useAuth();
+  const { user } = useAuth(); 
   return <Redirect href={user ? "/(tabs)/translator" : "/(auth)/login"} />;
 }
