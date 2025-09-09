@@ -163,6 +163,7 @@ O sistema será desenvolvido do zero, com backend, frontend web e aplicação mo
 - Link do Figma - [Figma](https://www.figma.com/design/Yomqxzx9faQlRf6rXEid1H/Projeto---4%C2%B0-Semestre?node-id=0-1&p=f&t=dwrobzGKlHl0qMhz-0)
 - Link do Modelo de Negócio - [Modelo de Negócio](docs/BusinessModel.png)
 - Link do Sprints.md - [Sprints](docs/Sprints.md)
+- Link do Diagrama C4 - [DiagramaC4](docs/DiagramaC4)
 
 ---
 
