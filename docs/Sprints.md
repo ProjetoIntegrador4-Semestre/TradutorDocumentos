@@ -36,7 +36,6 @@ Planejar as sprints até a entrega final.
 
 Preparar versão final do Documento de Visão + Protótipo.
 
-Sprint 3 – Backend Inicial + Mobile Estrutura
 
 # 📆 Período: 23/08 a 03/10 (entrega parcial)
 
@@ -44,7 +43,9 @@ Sprint 3 – Backend Inicial + Mobile Estrutura
 
 🔹 Atividades:
 
-Implementar API de autenticação (JWT e OAuth).
+Implementar tradução automática (integração com API de tradução, ex: Google Translate, DeepL, Hugging Face).
+
+Ajustar upload/download para formatos docx, pdf e ppt.
 
 Criar endpoints iniciais para upload de documentos.
 
@@ -52,9 +53,10 @@ Estruturar banco de dados (armazenar usuários, histórico de traduções).
 
 Desenvolver tela inicial no mobile (login, upload básico de documento).
 
+Desenvolver telas iniciais Front-End
+
 Configurar CI/CD com GitHub Actions.
 
-Implantar backend inicial na AWS (ou similar).
 
 # Sprint 4 – Funcionalidades Principais e Integração
 
@@ -64,17 +66,17 @@ Implantar backend inicial na AWS (ou similar).
 
 🔹 Atividades:
 
-Implementar tradução automática (integração com API de tradução, ex: Google Translate, DeepL, Hugging Face).
-
-Permitir tradução para múltiplos idiomas.
-
-Ajustar upload/download para formatos docx, pdf e ppt.
+Implementar API de autenticação (JWT e OAuth).
 
 Criar relatórios de segurança.
 
 Diagrama de classes e arquitetura geral.
 
-Testes iniciais de backend, frontend e mobile.
+Finalização do Front-End e Back-End
+
+Testes iniciais de integração entre backend, frontend e mobile.
+
+Subir projeto na AWS 
 
 # Sprint 5 – Refinamento, Testes e Entrega Final
 
