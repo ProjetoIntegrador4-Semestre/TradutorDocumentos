@@ -11,6 +11,7 @@ from app.services.auth import get_current_user, require_admin
 from app.models.entities import User, TranslationRecord
 from fastapi import Query
 
+from app.config.languages import SUPPORTED_LANGS, LANG_LABELS
 
 from app.db import get_db
 from app.services.translator import translate_text
@@ -52,6 +53,11 @@ async def translate_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    
+    target_lang = (target_lang or "").lower().strip()
+    if target_lang not in SUPPORTED_LANGS:
+        raise HTTPException(status_code=422, detail="Idioma alvo não suportado.")
+    
     """
     Recebe um DOCX/PPTX/PDF, extrai texto, traduz e retorna o arquivo traduzido para download.
     Também salva um registro simples na tabela TranslationRecord.
@@ -101,10 +107,8 @@ async def translate_file(
         )
 
     except HTTPException:
-        # reapresenta erro conhecido
         raise
     except Exception as e:
-        # log detalhado no console e erro claro para o cliente
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=f"Falha ao processar arquivo: {e}")
 
@@ -127,6 +131,25 @@ def list_records(
 
     rows = q.offset(offset).limit(limit).all()
     return rows
+
+
+@router.get("/languages")
+def list_languages(minimal: bool = True):
+    """
+    Se minimal=true (default): retorna só os códigos. Ex.: ["en","es",...]
+    Se minimal=false: retorna objetos com code/label/dir.
+    """
+    if minimal:
+        return SUPPORTED_LANGS
+    return [
+        {
+            "code": code,
+            "label": LANG_LABELS.get(code, code),
+            "dir": "rtl" if code in {"ar", "he", "fa", "ur"} else "ltr"
+        }
+        for code in SUPPORTED_LANGS
+    ]
+
 
 @router.delete("/records/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_record(record_id: int, db: Session = Depends(get_db), _: User = Depends(require_admin)):
