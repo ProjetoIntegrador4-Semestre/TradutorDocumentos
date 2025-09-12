@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useTheme } from "../context/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 type F = { id: string; name: string; owner: string; created_at: string; children?: F[] };
 
@@ -15,7 +16,8 @@ export default function FolderCard({
   onShare: () => void;
   onDelete: () => void;
 }) {
-  const { theme } = useTheme(); 
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   const date = new Date(folder.created_at).toLocaleDateString();
   const count = folder.children?.length ?? 0;
 
@@ -33,10 +35,10 @@ export default function FolderCard({
           onPress={onShare}
           style={[styles.btn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, marginRight: 8 }]}
         >
-          <Text style={[styles.btnGhostText, { color: theme.colors.text }]}>Compartilhar</Text>
+          <Text style={[styles.btnGhostText, { color: theme.colors.text }]}>{t("common.share")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onDelete} style={[styles.btn, { backgroundColor: "#EF4444", borderColor: "#EF4444" }]}>
-          <Text style={styles.btnDangerText}>Excluir</Text>
+          <Text style={styles.btnDangerText}>{t("common.delete")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -44,14 +46,7 @@ export default function FolderCard({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  card: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 10, flexDirection: "row", alignItems: "center" },
   info: { flex: 1, minWidth: 0, paddingRight: 8 },
   title: { fontWeight: "700", marginBottom: 4, fontSize: 14 },
   meta: { fontSize: 12 },

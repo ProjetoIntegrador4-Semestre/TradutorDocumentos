@@ -7,6 +7,7 @@ import FolderCard from "../../components/FolderCard";
 import { useTheme } from "../../context/ThemeContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 export type Folder = { id: string; name: string; owner: string; created_at: string; children?: Folder[] };
 
@@ -24,13 +25,12 @@ function updateName(node: Folder, id: string, name: string): Folder {
 function findById(node: Folder, id: string): Folder | null { if (node.id === id) return node; for (const c of node.children ?? []) { const f = findById(c, id); if (f) return f; } return null; }
 function getFolderByPath(root: Folder, pathIds: string[]): Folder { let cur = root; for (let i=1;i<pathIds.length;i++) cur=(cur.children??[]).find(c=>c.id===pathIds[i])??cur; return cur; }
 
-// confirm cross-platform
 function confirmDelete(message: string): Promise<boolean> {
   if (Platform.OS === "web") return Promise.resolve(window.confirm(message));
   return new Promise((resolve) => {
-    Alert.alert("Confirmar", message, [
+    Alert.alert("", message, [
       { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
-      { text: "Excluir", style: "destructive", onPress: () => resolve(true) },
+      { text: "OK", onPress: () => resolve(true) },
     ]);
   });
 }
@@ -38,10 +38,11 @@ function confirmDelete(message: string): Promise<boolean> {
 export default function Folders() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const [tree, setTree] = useState<Folder>({
     id: "root",
-    name: "Todas as pastas",
+    name: t("folders.title"),
     owner: "User",
     created_at: new Date().toISOString(),
     children: [
@@ -75,7 +76,7 @@ export default function Folders() {
   }
   async function onDelete(folder: Folder) {
     if (folder.id === "root") return;
-    const ok = await confirmDelete(`Deseja realmente excluir a pasta “${folder.name}”?`);
+    const ok = await confirmDelete(`${t("common.delete")}: “${folder.name}”?`);
     if (!ok) return;
     if (pathIds[pathIds.length - 1] === folder.id) setPathIds((p) => p.slice(0, -1));
     setTree((t) => removeNode(t, folder.id));
@@ -87,7 +88,7 @@ export default function Folders() {
 
       <View style={{ padding: 16, rowGap: 12 }}>
         <View style={[styles.headerChip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={{ color: theme.colors.text, fontWeight: "700" }}>Pastas</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "700" }}>{t("folders.title")}</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, gap: 10 }]}>
@@ -110,10 +111,10 @@ export default function Folders() {
           {current.id !== "root" && (
             <View style={{ flexDirection: "row", gap: 8 }}>
               <TouchableOpacity onPress={() => setRenameOpen(true)} style={[styles.smallBtn, { borderColor: theme.colors.border }]}>
-                <Text style={{ color: theme.colors.text, fontWeight: "600", fontSize: 12 }}>Renomear</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "600", fontSize: 12 }}>{t("folders.rename")}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => onDelete(current)} style={[styles.smallBtn, { backgroundColor: "#EF4444", borderColor: "#EF4444" }]}>
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>Excluir</Text>
+                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>{t("common.delete")}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -121,7 +122,7 @@ export default function Folders() {
 
         {/* Armazenamento */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={{ color: theme.colors.primary, marginBottom: 6, fontWeight: "600" }}>Armazenamento Disponível</Text>
+          <Text style={{ color: theme.colors.primary, marginBottom: 6, fontWeight: "600" }}>{t("folders.storage")}</Text>
           <View style={styles.progressTrack}><View style={[styles.progressBar, { backgroundColor: theme.colors.primary }]} /></View>
           <Text style={{ color: theme.colors.muted, marginTop: 4 }}>0,5 GB de 5 GB usados</Text>
         </View>
@@ -129,10 +130,10 @@ export default function Folders() {
         {/* Criar dentro da atual */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <Text style={{ fontWeight: "700", color: theme.colors.text, marginBottom: 8 }}>
-            Criar nova pasta {current.id !== "root" ? `em “${current.name}”` : ""}
+            {current.id !== "root" ? t("folders.createIn", { name: current.name }) : t("folders.newFolder")}
           </Text>
           <TouchableOpacity onPress={() => setSheetOpen(true)} style={[styles.cta, { backgroundColor: theme.colors.primary }]}>
-            <Text style={styles.ctaText}>+ Nova pasta</Text>
+            <Text style={styles.ctaText}>+ {t("folders.newFolder")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -145,19 +146,18 @@ export default function Folders() {
             <FolderCard
               folder={item}
               onOpen={() => openFolder(item.id)}
-              onShare={() => Alert.alert("Compartilhar", `Compartilhar a pasta “${item.name}” (mock).`)}
+              onShare={() => Alert.alert(t("common.share"), `${t("common.share")} “${item.name}” (mock).`)}
               onDelete={() => onDelete(item)}
             />
           )}
           ListEmptyComponent={
             <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, alignItems: "center" }]}>
-              <Text style={{ color: theme.colors.muted }}>Sem subpastas aqui ainda.</Text>
+              <Text style={{ color: theme.colors.muted }}>{t("folders.empty")}</Text>
             </View>
           }
         />
       </View>
 
-      {/* Botão voltar flutuante */}
       {pathIds.length > 1 && (
         <TouchableOpacity
           onPress={() => goTo(pathIds.length - 2)}

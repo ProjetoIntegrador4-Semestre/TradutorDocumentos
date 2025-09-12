@@ -4,6 +4,7 @@ import TopGreeting from "../../components/TopGreeting";
 import { Picker } from "@react-native-picker/picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 type Rec = { id: number; original_filename: string; file_type: string; created_at: string };
 type SortBy = "recent" | "oldest";
@@ -18,6 +19,7 @@ const TYPES = [
 function TypeSelect({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
   const [open, setOpen] = useState(false);
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   if (Platform.OS !== "web") {
     return (
@@ -62,6 +64,7 @@ export default function History() {
   const [sortBy, setSortBy] = useState<SortBy>("recent");
   const [items, setItems] = useState<Rec[]>([]);
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const now = Date.now();
@@ -90,18 +93,18 @@ export default function History() {
 
       <View style={{ padding: 16, rowGap: 12 }}>
         <View style={[styles.headerChip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={{ color: theme.colors.text, fontWeight: "700" }}>Histórico de Requisição</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "700" }}>{t("history.title")}</Text>
         </View>
 
         {/* FILTROS */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={{ marginBottom: 6, color: theme.colors.text, fontWeight: "600" }}>Filtros</Text>
+          <Text style={{ marginBottom: 6, color: theme.colors.text, fontWeight: "600" }}>{t("history.filters")}</Text>
 
           <TypeSelect value={type} onChange={setType} />
 
           <View style={{ flexDirection: "row", columnGap: 8, marginTop: 8 }}>
             <TextInput
-              placeholder="Palavra chave"
+              placeholder={t("history.keyword")}
               value={q}
               onChangeText={setQ}
               placeholderTextColor={theme.colors.muted}
@@ -118,14 +121,14 @@ export default function History() {
               onPress={() => setSortBy("recent")}
               style={[styles.chip, { borderColor: sortBy === "recent" ? theme.colors.primary : theme.colors.border, backgroundColor: theme.colors.surface }]}
             >
-              <Text style={{ color: sortBy === "recent" ? theme.colors.primary : theme.colors.muted, fontWeight: "600" }}>Mais recentes</Text>
+              <Text style={{ color: sortBy === "recent" ? theme.colors.primary : theme.colors.muted, fontWeight: "600" }}>{t("history.newest")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => setSortBy("oldest")}
               style={[styles.chip, { borderColor: sortBy === "oldest" ? theme.colors.primary : theme.colors.border, backgroundColor: theme.colors.surface }]}
             >
-              <Text style={{ color: sortBy === "oldest" ? theme.colors.primary : theme.colors.muted, fontWeight: "600" }}>Mais antigos</Text>
+              <Text style={{ color: sortBy === "oldest" ? theme.colors.primary : theme.colors.muted, fontWeight: "600" }}>{t("history.oldest")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -146,7 +149,7 @@ export default function History() {
                 </Text>
               </View>
               <TouchableOpacity onPress={() => remove(item.id)} style={styles.deleteBtn}>
-                <Text style={{ color: "#fff", fontWeight: "700" }}>Excluir</Text>
+                <Text style={{ color: "#fff", fontWeight: "700" }}>{t("history.delete")}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -162,7 +165,6 @@ const styles = StyleSheet.create({
   input: { flex: 1, borderWidth: 1, borderRadius: 12, padding: 10 },
   searchBtn: { borderRadius: 12, paddingHorizontal: 12, justifyContent: "center" },
   chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
-  // select web
   selectBtn: { height: 44, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.25)", justifyContent: "center", alignItems: "center", padding: 16 },
   menu: { width: 260, borderRadius: 12, borderWidth: 1, overflow: "hidden" },
