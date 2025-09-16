@@ -24,18 +24,48 @@ export default function Login() {
     <View style={{ flex: 1, padding: 16, backgroundColor: "#f2f2f2" }}>
       <View style={{ flexDirection: "row", justifyContent: "center", columnGap: 20, marginBottom: 16 }}>
         <Text style={{ color: "#2b64ff", fontWeight: "700" }}>Login</Text>
-        <Link href="/(auth)/register" asChild><TouchableOpacity><Text style={{ color: "#2b64ff" }}>Cadastre -se</Text></TouchableOpacity></Link>
+        <Link href="/(auth)/register" asChild>
+          <TouchableOpacity>
+            <Text style={{ color: "#2b64ff" }}>Cadastre -se</Text>
+          </TouchableOpacity>
+        </Link>
       </View>
 
       <Text style={{ color: "#555", marginBottom: 16 }}>
         Faça login para traduzir seus documentos de forma rápida e segura. Com sua conta, você acompanha o progresso das traduções e tem acesso ao histórico.
       </Text>
 
-      <Input label="Email" placeholder="Insira seu email..." value={email} onChangeText={setEmail} keyboardType="email-address" />
-      <Input label="Senha" placeholder="Insira sua senha..." value={pwd} onChangeText={setPwd} secure />
+      <Input
+        label="Email"
+        placeholder="Insira seu email..."
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+      />
+      <Input
+        label="Senha"
+        placeholder="Insira sua senha..."
+        value={pwd}
+        onChangeText={setPwd}
+        secure
+      />
 
-      <View style={{ marginTop: 8 }}>
-        <TouchableOpacity onPress={onLogin} style={{ backgroundColor: "#2b4bff", borderRadius: 8, paddingVertical: 14, alignItems: "center" }}>
+      <View style={{ alignItems: "flex-end", marginTop: 6 }}>
+        <TouchableOpacity
+          onPress={() => router.push("/(auth)/forgot")}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={{ color: "#2b64ff", fontWeight: "600" }}>
+            Esqueci minha senha
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ marginTop: 12 }}>
+        <TouchableOpacity
+          onPress={onLogin}
+          style={{ backgroundColor: "#2b4bff", borderRadius: 8, paddingVertical: 14, alignItems: "center" }}
+        >
           <Text style={{ color: "#fff", fontWeight: "700", letterSpacing: 2 }}>LOGIN</Text>
         </TouchableOpacity>
       </View>

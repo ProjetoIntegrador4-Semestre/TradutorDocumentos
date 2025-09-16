@@ -91,7 +91,7 @@ const resources = {
   },
 };
 
-// pega idioma do aparelho (expo-localization novo)
+// pega idioma d o aparelho (expo-localization novo)
 function getDeviceLang(): string {
   try {
     const locales = (Localization as any).getLocales?.() ?? [];
