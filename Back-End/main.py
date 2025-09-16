@@ -6,6 +6,7 @@ from app.db import engine
 from app.models.entities import Base
 from app.routes import routes_auth
 from app.routes import routes_auth_google
+from app.routes import routes_password
 from starlette.middleware.sessions import SessionMiddleware
 from app.config.settings import settings  
 
@@ -23,6 +24,7 @@ app.add_middleware(
 app.include_router(routes_auth.router)
 app.include_router(routes_translation.router, tags=["Translation"])
 app.include_router(routes_auth_google.router)
+app.include_router(routes_password.router)
 
 @app.get("/")
 def home():
