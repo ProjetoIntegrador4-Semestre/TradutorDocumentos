@@ -1,43 +1,57 @@
-version: "3.9"
+# docker-compose.yml  (DEV)
 services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_DB: translator
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
+      POSTGRES_DB: ${POSTGRES_DB:-translator}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
     ports:
-      - "5432:5432"
+      - "${PG_PORT:-5432}:5432"   # troque PG_PORT se já tiver outro Postgres rodando
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d translator"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-translator}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+    restart: unless-stopped
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # carrega .env do projeto
     env_file: .env
+    # garante DATABASE_URL mesmo que .env esteja faltando
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://$${POSTGRES_USER:-app}:$${POSTGRES_PASSWORD:-app}@db:5432/$${POSTGRES_DB:-translator}}
+      APP_ENV: ${APP_ENV:-dev}
     volumes:
       - .:/app
       - ./temp:/app/temp
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4:8
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
     ports:
-      - "5050:80"
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   pgdata:
+  pgadmin_data:

@@ -3,8 +3,11 @@ from docx import Document
 from pptx import Presentation
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
+import re
+
 
 SLIDE_BREAK = "\n\n---SLIDE_BREAK---\n\n"
+
 
 def generate_file(original_path: str, translated_text: str) -> str:
     ext = os.path.splitext(original_path)[1].lower()
@@ -57,3 +60,4 @@ def generate_file(original_path: str, translated_text: str) -> str:
         return out_path
 
     raise ValueError("Formato de arquivo não suportado.")
+

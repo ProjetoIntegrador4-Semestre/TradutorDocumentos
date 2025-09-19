@@ -6,10 +6,22 @@ from sqlalchemy import create_engine
 
 # IMPORTANTE: Base dos seus modelos
 from app.models.entities import Base   # garanta que app/ e app/models/ têm __init__.py
+from dotenv import load_dotenv
+
+# carrega .env
+load_dotenv()
+
+
 
 config = context.config
 if config.config_file_name:
     fileConfig(config.config_file_name)
+
+# pega a URL do .env e injeta no alembic.ini em tempo de execução
+db_url = os.getenv("DATABASE_URL")
+if not db_url:
+    raise RuntimeError("DATABASE_URL não definido. Configure no .env ou no ambiente.")
+config.set_main_option("sqlalchemy.url", db_url)
 
 target_metadata = Base.metadata  # <- coração do autogenerate
 
