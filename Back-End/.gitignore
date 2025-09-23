@@ -1,1 +1,3 @@
 .env
+./Back-End/temp
+__pycache__/
