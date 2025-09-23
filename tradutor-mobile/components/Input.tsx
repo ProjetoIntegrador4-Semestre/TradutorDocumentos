@@ -1,4 +1,3 @@
-// components/Input.tsx
 import React, { useState, forwardRef } from "react";
 import {
   TextInput,
@@ -14,11 +13,11 @@ import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
   label?: string;
-  secure?: boolean;                // ativa ícone de mostrar/ocultar
+  secure?: boolean;                
   containerStyle?: ViewStyle;
   labelStyle?: TextStyle;
   inputStyle?: TextStyle;
-} & Omit<TextInputProps, "secureTextEntry">; // vamos controlar secureTextEntry via "secure" + estado interno
+} & Omit<TextInputProps, "secureTextEntry">; 
 
 const Input = forwardRef<TextInput, Props>(
   (

@@ -1,4 +1,3 @@
-// context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { BASE_URL } from "../lib/api";
 import { ApiError } from "../lib/api";
@@ -6,23 +5,6 @@ import { getAuth, saveAuth, clearAuth } from "../lib/storage";
 
 type User = { id?: string; name?: string; email: string };
 
-/*************  ✨ Windsurf Command ⭐  *************/
-/**
- * Provides user authentication state and methods to children components.
- *
- * @returns {Object} an object containing the user state and methods to sign in and out.
- * @example
- * import React from "react";
- * import { AuthProvider } from "../context/AuthContext";
- *
- * export default function App() {
- *   return (
- *     <AuthProvider>
- *       <Router />
- *     </AuthProvider>
- *   );
- * }
- */
 /*******  d323c8f0-99d4-4b0a-96eb-9e4fc8ac9198  *******/type AuthCtx = {
   user: User | null;
   loading: boolean;
