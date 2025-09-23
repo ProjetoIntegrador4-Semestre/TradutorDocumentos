@@ -1,44 +1,89 @@
-import React, { useState } from "react";
-import { TextInput, View, Text, TouchableOpacity } from "react-native";
+// components/Input.tsx
+import React, { useState, forwardRef } from "react";
+import {
+  TextInput,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInputProps,
+  ViewStyle,
+  TextStyle,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
-  label: string;
-  placeholder?: string;
-  secure?: boolean;
-  value: string;
-  onChangeText: (t: string) => void;
-  keyboardType?: "default" | "email-address";
-};
+  label?: string;
+  secure?: boolean;                // ativa ícone de mostrar/ocultar
+  containerStyle?: ViewStyle;
+  labelStyle?: TextStyle;
+  inputStyle?: TextStyle;
+} & Omit<TextInputProps, "secureTextEntry">; // vamos controlar secureTextEntry via "secure" + estado interno
 
-export default function Input({ label, placeholder, secure, value, onChangeText, keyboardType }: Props) {
-  const [hide, setHide] = useState(!!secure);
+const Input = forwardRef<TextInput, Props>(
+  (
+    {
+      label,
+      secure,
+      containerStyle,
+      labelStyle,
+      inputStyle,
+      style,
+      ...rest // <- aqui vem autoCapitalize, autoCorrect, keyboardType, etc.
+    },
+    ref
+  ) => {
+    const [hide, setHide] = useState(!!secure);
 
-  return (
-    <View style={{ marginBottom: 12 }}>
-      <Text style={{ marginBottom: 6, color: "#333" }}>{label}</Text>
-      <View style={{ position: "relative" }}>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          keyboardType={keyboardType}
-          secureTextEntry={hide}
-          style={{
-            borderWidth: 1, borderColor: "#cfcfcf", borderRadius: 6,
-            paddingVertical: 10, paddingHorizontal: 12, paddingRight: secure ? 42 : 12,
-            backgroundColor: "#fff"
-          }}
-        />
-        {secure && (
-          <TouchableOpacity
-            onPress={() => setHide((p) => !p)}
-            style={{ position: "absolute", right: 10, top: 10 }}
-          >
-            <Ionicons name={hide ? "eye-off-outline" : "eye-outline"} size={22} color="#666" />
-          </TouchableOpacity>
-        )}
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {!!label && <Text style={[styles.label, labelStyle]}>{label}</Text>}
+
+        <View style={{ position: "relative" }}>
+          <TextInput
+            ref={ref}
+            secureTextEntry={!!secure && hide}
+            style={[
+              styles.input,
+              { paddingRight: secure ? 42 : 12 },
+              inputStyle,
+              style,
+            ]}
+            {...rest}
+          />
+
+          {secure && (
+            <TouchableOpacity
+              onPress={() => setHide((p) => !p)}
+              style={styles.eyeBtn}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Ionicons
+                name={hide ? "eye-off-outline" : "eye-outline"}
+                size={22}
+                color="#666"
+              />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </View>
-  );
-}
+    );
+  }
+);
+
+export default Input;
+
+const styles = StyleSheet.create({
+  container: { marginBottom: 12 },
+  label: { marginBottom: 6, color: "#333" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#cfcfcf",
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "#fff",
+    color: "#111",
+  },
+  eyeBtn: { position: "absolute", right: 10, top: 10 },
+});

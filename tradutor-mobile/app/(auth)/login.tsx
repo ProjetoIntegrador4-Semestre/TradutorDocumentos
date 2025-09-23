@@ -1,3 +1,4 @@
+// app/(auth)/login.tsx
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { Link, useRouter } from "expo-router";
@@ -9,14 +10,21 @@ export default function Login() {
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
   async function onLogin() {
     try {
-      await signIn(email, pwd);
+      if (!email.trim() || !pwd.trim()) {
+        return Alert.alert("Ops", "Preencha e-mail e senha.");
+      }
+      setSubmitting(true);
+      await signIn(email.trim().toLowerCase(), pwd);
       router.replace("/(tabs)/translator");
     } catch (e: any) {
       Alert.alert("Erro", e?.message ?? "Falha no login");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -26,7 +34,7 @@ export default function Login() {
         <Text style={{ color: "#2b64ff", fontWeight: "700" }}>Login</Text>
         <Link href="/(auth)/register" asChild>
           <TouchableOpacity>
-            <Text style={{ color: "#2b64ff" }}>Cadastre -se</Text>
+            <Text style={{ color: "#2b64ff" }}>Cadastre-se</Text>
           </TouchableOpacity>
         </Link>
       </View>
@@ -41,6 +49,8 @@ export default function Login() {
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
       />
       <Input
         label="Senha"
@@ -50,6 +60,7 @@ export default function Login() {
         secure
       />
 
+      {/* Esqueci minha senha */}
       <View style={{ alignItems: "flex-end", marginTop: 6 }}>
         <TouchableOpacity
           onPress={() => router.push("/(auth)/forgot")}
@@ -64,9 +75,18 @@ export default function Login() {
       <View style={{ marginTop: 12 }}>
         <TouchableOpacity
           onPress={onLogin}
-          style={{ backgroundColor: "#2b4bff", borderRadius: 8, paddingVertical: 14, alignItems: "center" }}
+          disabled={submitting}
+          style={{
+            backgroundColor: "#2b4bff",
+            borderRadius: 8,
+            paddingVertical: 14,
+            alignItems: "center",
+            opacity: submitting ? 0.7 : 1,
+          }}
         >
-          <Text style={{ color: "#fff", fontWeight: "700", letterSpacing: 2 }}>LOGIN</Text>
+          <Text style={{ color: "#fff", fontWeight: "700", letterSpacing: 2 }}>
+            {submitting ? "Entrando..." : "LOGIN"}
+          </Text>
         </TouchableOpacity>
       </View>
 
