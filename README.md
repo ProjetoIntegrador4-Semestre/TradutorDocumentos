@@ -164,6 +164,7 @@ O sistema será desenvolvido do zero, com backend, frontend web e aplicação mo
 - Link do Modelo de Negócio - [Modelo de Negócio](docs/BusinessModel.png)
 - Link do Sprints.md - [Sprints](docs/Sprints.md)
 - Link do Diagrama C4 - [DiagramaC4](docs/DiagramaC4)
+- Link do EAD - [EAD](docs/EAD)
 
 ---
 
