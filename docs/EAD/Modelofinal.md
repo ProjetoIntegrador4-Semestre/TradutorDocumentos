@@ -1,74 +1,58 @@
+# TraduDoc - Estrutura Analitica do Projeto (EAP)
+
 ```mermaid
 flowchart TB
-  %% Nível 1
-  P[TraduDoc — Estrutura Analítica do Projeto]
+  P["TraduDoc - Estrutura Analitica do Projeto (EAP)"]
 
-  P --> E1[Entrega 01 — Produto (Solução)]
-  P --> E2[Entrega 02 — Plataforma & Operação]
-  P --> E3[Entrega 03 — Gestão, Qualidade & Documentação]
+  %% Nivel 1
+  P --> D1["Entrega 01 - Produto"]
+  P --> D2["Entrega 02 - Plataforma e Operacao"]
+  P --> D3["Entrega 03 - Gestao, Qualidade e Documentacao"]
 
-  %% Nível 2
-  E1 --> E1_1[Subentrega — Backend (API de Tradução)]
-  E1 --> E1_2[Subentrega — Frontend Web]
-  E1 --> E1_3[Subentrega — App Mobile]
+  %% Nivel 2
+  D1 --> B1["Backend (API de Traducao)"]
+  D1 --> F1["Frontend Web"]
+  D1 --> M1["Aplicativo Mobile"]
 
-  E2 --> E2_1[Subentrega — Infra AWS]
-  E2 --> E2_2[Subentrega — Observabilidade & Segurança]
-  E2 --> E2_3[Subentrega — CI/CD]
+  D2 --> I1["Infra em Nuvem (AWS)"]
+  D2 --> O1["Observabilidade e Seguranca"]
+  D2 --> C1["CI/CD"]
 
-  E3 --> E3_1[Subentrega — Gestão Ágil]
-  E3 --> E3_2[Subentrega — Qualidade & Testes]
-  E3 --> E3_3[Subentrega — Documentação Acadêmica]
+  D3 --> G1["Gestao Agil"]
+  D3 --> Q1["Qualidade e Testes"]
+  D3 --> D1B["Documentacao Academica"]
 
-  %% Nível 3 (exemplos objetivos e mensuráveis)
-  %% Backend
-  E1_1 --> E1_1a[Auth JWT/OAuth e RBAC]
-  E1_1 --> E1_1b[Tradução & OCR (pipeline)]
-  E1_1 --> E1_1c[Histórico + RDS/S3]
+  %% Nivel 3 (exemplos)
+  B1 --> B1a["Autenticacao (JWT/OAuth) e RBAC"]
+  B1 --> B1b["Traducao e OCR (pipeline)"]
+  B1 --> B1c["Historico + RDS/S3"]
 
-  %% Frontend
-  E1_2 --> E1_2a[Login/Cadastro + OAuth]
-  E1_2 --> E1_2b[UI de Tradução (upload/idiomas/status)]
-  E1_2 --> E1_2c[Histórico + Download]
+  F1 --> F1a["Login/Cadastro + OAuth"]
+  F1 --> F1b["UI de Traducao (upload/idiomas/status)"]
+  F1 --> F1c["Historico + Download"]
 
-  %% Mobile
-  E1_3 --> E1_3a[Login/JWT (sessão segura)]
-  E1_3 --> E1_3b[File Picker PDF/DOCX/PPT]
-  E1_3 --> E1_3c[Histórico/Push (opcional)]
+  M1 --> M1a["Login/JWT (sessao segura)"]
+  M1 --> M1b["Seletor de Arquivos (PDF/DOCX/PPT)"]
+  M1 --> M1c["Historico/Push (opcional)"]
 
-  %% Infra
-  E2_1 --> E2_1a[VPC/IAM (menor privilégio)]
-  E2_1 --> E2_1b[ECS + ALB]
-  E2_1 --> E2_1c[RDS Postgres + S3]
+  I1 --> I1a["VPC / IAM (menor privilegio)"]
+  I1 --> I1b["ECS + ALB"]
+  I1 --> I1c["RDS Postgres + S3"]
 
-  %% Observabilidade & Segurança
-  E2_2 --> E2_2a[Logs/Métricas/Alarmes]
-  E2_2 --> E2_2b[Backups/Retenção (LGPD)]
-  E2_2 --> E2_2c[Criptografia em trânsito/repouso]
+  O1 --> O1a["Logs e Metricas"]
+  O1 --> O1b["Backups e Retencao (LGPD)"]
+  O1 --> O1c["Criptografia (transito/repouso)"]
 
-  %% CI/CD
-  E2_3 --> E2_3a[Build/Test (GitHub Actions)]
-  E2_3 --> E2_3b[Imagem/Artefatos]
-  E2_3 --> E2_3c[Deploy Automatizado]
+  C1 --> C1a["Build e Test (GitHub Actions)"]
+  C1 --> C1b["Artefatos / Imagens"]
+  C1 --> C1c["Deploy Automatizado"]
 
-  %% Gestão Ágil
-  E3_1 --> E3_1a[Board/Sprints (GitHub Projects)]
-  E3_1 --> E3_1b[Riscos & Comunicação]
-  E3_1 --> E3_1c[Status Reports]
+  G1 --> G1a["Board e Sprints (GitHub Projects)"]
+  G1 --> G1b["Riscos e Comunicacao"]
+  G1 --> G1c["Relatorios de Status"]
 
-  %% Qualidade & Testes
-  E3_2 --> E3_2a[Testes Backend]
-  E3_2 --> E3_2b[Testes Web/Mobile]
-  E3_2 --> E3_2c[Testes de Contrato/Smoke]
+  Q1 --> Q1a["Testes Backend"]
+  Q1 --> Q1b["Testes Web/Mobile"]
+  Q1 --> Q1c["Contratos de API / Smoke"]
 
-  %% Documentação
-  E3_3 --> E3_3a[Termo/Visão/Escopo]
-  E3_3 --> E3_3b[Artigo Científico]
-  E3_3 --> E3_3c[Diagramas C4 & Classes]
-
-  %% Legenda de fases (como no exemplo: Concepção / Execução)
-  subgraph Fases
-    direction TB
-    F1[Concepção]
-    F2[Execução]
-  end
+  D1B --> D1Ba["Termo]()
