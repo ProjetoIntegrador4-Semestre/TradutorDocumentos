@@ -1,12 +1,10 @@
-package com.example.backend.controller;
+package com.example.backend.controllers;
 
-import com.example.backend.entity.Role;
-import com.example.backend.entity.RoleName;
-import com.example.backend.entity.User;
-import com.example.backend.repository.RoleRepository;
-import com.example.backend.repository.UserRepository;
-import com.example.backend.security.JwtUtils;
-import com.example.backend.security.UserDetailsImpl;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,11 +12,18 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.backend.entity.Role;
+import com.example.backend.entity.RoleName;
+import com.example.backend.entity.User;
+import com.example.backend.repositories.RoleRepository;
+import com.example.backend.repositories.UserRepository;
+import com.example.backend.security.JwtUtils;
+import com.example.backend.security.UserDetailsImpl;
 
 @RestController
 @RequestMapping("/api/auth")

@@ -31,3 +31,5 @@ build/
 
 ### VS Code ###
 .vscode/
+
+backendJava\src\main\resources\application.properties

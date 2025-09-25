@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 import com.example.backend.entity.Role;
 import com.example.backend.entity.RoleName;
 import com.example.backend.entity.User;
-import com.example.backend.repository.RoleRepository;
-import com.example.backend.repository.UserRepository;
+import com.example.backend.repositories.RoleRepository;
+import com.example.backend.repositories.UserRepository;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
