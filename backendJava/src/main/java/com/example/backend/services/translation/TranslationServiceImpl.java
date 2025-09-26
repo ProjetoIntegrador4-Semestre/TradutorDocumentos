@@ -21,23 +21,24 @@ import lombok.RequiredArgsConstructor;
 public class TranslationServiceImpl implements TranslationService {
 
   private final StorageService storage;
-  private final GoogleCloudTranslationService gtranslator;
+  private final LibreTranslateService mt;
 
-  @Override
-  public String translate(MultipartFile file, String sourceLang, String targetLang) {
+
+   @Override
+    public String translate(MultipartFile file, String sourceLang, String targetLang) {
     Path uploaded = storage.saveUpload(file);
     String text = extractText(uploaded);
 
-    // Detecta automaticamente se não veio source_lang
     String effectiveSrc = (sourceLang == null || sourceLang.isBlank())
-        ? gtranslator.detectLanguage(text)
+        ? mt.detectLanguage(text)
         : sourceLang;
-    
-    String translated = gtranslator.translateLargeText(text, sourceLang, targetLang);
+
+    String translated = mt.translateLargeText(text, effectiveSrc, targetLang);
     String outName = outFileName(file.getOriginalFilename(), targetLang, "txt");
     storage.saveOutput(outName, translated.getBytes(StandardCharsets.UTF_8));
     return outName;
   }
+
 
   private String extractText(Path path) {
     try (InputStream is = new BufferedInputStream(Files.newInputStream(path))) {
