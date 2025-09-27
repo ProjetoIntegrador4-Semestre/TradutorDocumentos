@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.backend.dto.translation.SigninRequest;
 import com.example.backend.entities.Role;
 import com.example.backend.entities.RoleName;
 import com.example.backend.entities.User;
@@ -44,28 +45,38 @@ public class AuthController {
     JwtUtils jwtUtils;
     
     @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> authenticateUser(@RequestBody SigninRequest signinRequest) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
-        
+                new UsernamePasswordAuthenticationToken(signinRequest.getEmail(), signinRequest.getPassword()));
+
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         String jwt = jwtUtils.generateJwtToken(userDetails);
-        
+
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
-        
-        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), roles));
+
+        return ResponseEntity.ok(new JwtResponse(
+                jwt,
+                userDetails.getId(),
+                userDetails.getUsername(),  // você pode adicionar também o email aqui se quiser
+                roles
+        ));
     }
+
     
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@RequestBody SignupRequest signUpRequest) {
         if (userRepository.findByUsername(signUpRequest.getUsername()).isPresent()) {
             return ResponseEntity.badRequest().body("Error: Username is already taken!");
         }
+        if (userRepository.findByEmail(signUpRequest.getEmail()).isPresent()) {
+        return ResponseEntity.badRequest().body("Error: Email is already in use!");
+        }
         
         User user = new User(signUpRequest.getUsername(), encoder.encode(signUpRequest.getPassword()));
+        user.setEmail(signUpRequest.getEmail());
         
         Set<String> strRoles = signUpRequest.getRole();
         Set<Role> roles = new HashSet<>();
@@ -108,19 +119,23 @@ public class AuthController {
     }
     
     public static class SignupRequest {
-        private String username;
-        private String password;
-        private Set<String> role;
-        
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
-        
-        public Set<String> getRole() { return this.role; }
-        public void setRole(Set<String> role) { this.role = role; }
-    }
+    private String username;
+    private String email;   
+    private String password;
+    private Set<String> role;
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public Set<String> getRole() { return this.role; }
+    public void setRole(Set<String> role) { this.role = role; }
+}
     
     public static class JwtResponse {
         private String token;

@@ -14,6 +14,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,7 +32,7 @@ public class WebSecurityConfig {
   @Bean
   public DaoAuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
     DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-    authProvider.setUserDetailsService(userDetailsService); // ← forma suportada
+    authProvider.setUserDetailsService(userDetailsService);
     authProvider.setPasswordEncoder(passwordEncoder);
     return authProvider;
   }
@@ -58,35 +59,45 @@ public class WebSecurityConfig {
     return source;
   }
 
+  // ✅ Define o filtro JWT como bean
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-      .cors(c -> c.configurationSource(corsConfigurationSource())) // ← habilita CORS
-      .csrf(csrf -> csrf.disable())
-      .headers(h -> h.frameOptions(f -> f.disable())) // H2
-      .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-      .authorizeHttpRequests(auth -> auth
-        // liberar explicitamente POST e OPTIONS
-        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-        .requestMatchers(HttpMethod.POST, "/translate-file").permitAll()
-        .requestMatchers("/languages").permitAll()
-        .requestMatchers("/records/**").authenticated()
+  public AuthTokenFilter authTokenFilter() {
+    return new AuthTokenFilter();
+  }
 
-        // swagger + h2 + auth
-        .requestMatchers(
+  @Bean
+  SecurityFilterChain securityFilterChain(HttpSecurity http, AuthTokenFilter authTokenFilter) throws Exception {
+      http
+        .cors(c -> c.configurationSource(corsConfigurationSource()))
+        .csrf(csrf -> csrf.disable())
+        .headers(h -> h.frameOptions(f -> f.disable()))
+        .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+          .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+          // 🔒 precisa estar autenticado
+          .requestMatchers(HttpMethod.POST, "/translate-file").authenticated()
+          .requestMatchers("/records/**").authenticated()
+
+          // 🌍 abertos
+          .requestMatchers(
           "/",
           "/files/**",
           "/api/auth/**",
           "/h2-console/**",
           "/swagger-ui.html", "/swagger-ui/**",
-          "/v3/api-docs/**", "/v3/api-docs.yaml"
-        ).permitAll()
+          "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml",
+          "/swagger-resources", "/swagger-resources/**"
+          ).permitAll()
 
-        .anyRequest().permitAll()
-      );
 
-    
+          // qualquer outro endpoint precisa estar logado
+          .anyRequest().authenticated()
+        );
 
-    return http.build();
+      // 🔑 registra o filtro JWT antes do UsernamePasswordAuthenticationFilter
+      http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+
+      return http.build();
   }
 }

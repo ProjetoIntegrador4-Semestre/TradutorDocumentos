@@ -13,13 +13,15 @@ import com.example.backend.entities.User;
 public class UserDetailsImpl implements UserDetails {
     private Long id;
     private String username;
+    private String email;
     private String password;
     private Collection<? extends GrantedAuthority> authorities;
     
-    public UserDetailsImpl(Long id, String username, String password, 
+    public UserDetailsImpl(Long id, String username, String email, String password, 
                           Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
+        this.email = email;
         this.password = password;
         this.authorities = authorities;
     }
@@ -32,6 +34,7 @@ public class UserDetailsImpl implements UserDetails {
         return new UserDetailsImpl(
                 user.getId(),
                 user.getUsername(),
+                user.getEmail(),   // novo campo
                 user.getPassword(),
                 authorities);
     }
@@ -42,12 +45,18 @@ public class UserDetailsImpl implements UserDetails {
     }
     
     public Long getId() { return id; }
+
+    public String getEmail() { return email; }
     
     @Override
     public String getPassword() { return password; }
     
     @Override
-    public String getUsername() { return username; }
+    public String getUsername() { 
+        // Por padrão, o Spring usa este campo para autenticação.
+        // Agora você pode trocar para email se quiser que o login seja por email.
+        return email;  
+    }
     
     @Override
     public boolean isAccountNonExpired() { return true; }

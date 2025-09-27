@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.backend.entities.TranslationRecord;
+import com.example.backend.entities.User;
+import com.example.backend.repositories.UserRepository;
 import com.example.backend.services.storage.StorageService;
 
 import lombok.RequiredArgsConstructor;
@@ -21,11 +23,12 @@ import lombok.RequiredArgsConstructor;
 public class TranslationServiceImpl implements TranslationService {
 
   private final StorageService storage;
-  private final LibreTranslateService mt;                 // seu client do LibreTranslate
-  private final TranslationRecordService recordService;  // pra salvar/listar registros
+  private final LibreTranslateService mt;
+  private final TranslationRecordService recordService;
+  private final UserRepository userRepository;
 
   @Override
-  public String translate(MultipartFile file, String sourceLang, String targetLang) {
+  public String translate(MultipartFile file, String sourceLang, String targetLang, String username) {
     // 1) salvar upload e extrair texto
     Path uploaded = storage.saveUpload(file);
     String text = extractText(uploaded);
@@ -40,23 +43,11 @@ public class TranslationServiceImpl implements TranslationService {
 
     // 4) gravar arquivo de saída
     String outName = outFileName(file.getOriginalFilename(), targetLang, "txt");
-
-    // Se seu StorageService.saveOutput() **devolve** o Path:
     Path outPath = storage.saveOutput(outName, translated.getBytes(StandardCharsets.UTF_8));
 
-    // --- Se o seu saveOutput for void, use este fallback em vez da linha acima ---
-    // Path outPath = storage.outputPath(outName); // crie este método no StorageService, ou:
-    // Path outPath = Paths.get(System.getProperty("user.dir"), "data", "outputs", outName);
-
-    // 5) obter usuário autenticado (se existir)
-    Long userId = null;
-    try {
-      var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-      if (auth != null && auth.isAuthenticated()
-          && auth.getPrincipal() instanceof com.example.backend.security.UserDetailsImpl u) {
-        userId = u.getId();
-      }
-    } catch (Exception ignored) {}
+    // 5) buscar usuário logado
+    User user = userRepository.findByEmail(username)
+        .orElse(null); // se não achar, salva sem user_id
 
     // 6) salvar registro no banco
     TranslationRecord rec = TranslationRecord.builder()
@@ -64,14 +55,10 @@ public class TranslationServiceImpl implements TranslationService {
         .fileType(detectFileType(file.getOriginalFilename()))
         .detectedLang(detectedLang)
         .targetLang(targetLang)
-        .outputPath(outPath.toString())  // ex.: /app/data/outputs/Documento.es.txt
+        .outputPath(outPath.toString())
+        .user(user) // pode ser null, mas se achar associa
         .build();
 
-    if (userId != null) {
-      var usr = new com.example.backend.entities.User();
-      usr.setId(userId);
-      rec.setUser(usr);
-    }
     recordService.save(rec);
 
     // 7) devolver o nome do arquivo (o controller já monta o /files/<nome>)

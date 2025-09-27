@@ -36,3 +36,5 @@ application.properties
 /data
 .idea/
 *.iml
+
+settings.json
