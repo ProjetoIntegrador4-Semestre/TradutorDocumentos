@@ -1,4 +1,4 @@
-package com.example.backend.entity;
+package com.example.backend.entities;
 
 import java.util.HashSet;
 import java.util.Set;

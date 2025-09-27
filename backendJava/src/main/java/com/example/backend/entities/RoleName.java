@@ -1,4 +1,4 @@
-package com.example.backend.entity;
+package com.example.backend.entities;
 
 public enum RoleName {
     ROLE_USER,

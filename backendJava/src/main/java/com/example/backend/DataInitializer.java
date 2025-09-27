@@ -7,9 +7,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import com.example.backend.entity.Role;
-import com.example.backend.entity.RoleName;
-import com.example.backend.entity.User;
+import com.example.backend.entities.Role;
+import com.example.backend.entities.RoleName;
+import com.example.backend.entities.User;
 import com.example.backend.repositories.RoleRepository;
 import com.example.backend.repositories.UserRepository;
 

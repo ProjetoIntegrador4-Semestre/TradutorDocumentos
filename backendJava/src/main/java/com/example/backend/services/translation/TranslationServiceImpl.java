@@ -3,8 +3,7 @@ package com.example.backend.services.translation;
 import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
@@ -12,6 +11,7 @@ import org.apache.tika.sax.BodyContentHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.backend.entities.TranslationRecord;
 import com.example.backend.services.storage.StorageService;
 
 import lombok.RequiredArgsConstructor;
@@ -21,24 +21,64 @@ import lombok.RequiredArgsConstructor;
 public class TranslationServiceImpl implements TranslationService {
 
   private final StorageService storage;
-  private final LibreTranslateService mt;
+  private final LibreTranslateService mt;                 // seu client do LibreTranslate
+  private final TranslationRecordService recordService;  // pra salvar/listar registros
 
-
-   @Override
-    public String translate(MultipartFile file, String sourceLang, String targetLang) {
+  @Override
+  public String translate(MultipartFile file, String sourceLang, String targetLang) {
+    // 1) salvar upload e extrair texto
     Path uploaded = storage.saveUpload(file);
     String text = extractText(uploaded);
 
-    String effectiveSrc = (sourceLang == null || sourceLang.isBlank())
+    // 2) detectar idioma se não foi informado
+    String detectedLang = (sourceLang == null || sourceLang.isBlank())
         ? mt.detectLanguage(text)
         : sourceLang;
 
-    String translated = mt.translateLargeText(text, effectiveSrc, targetLang);
+    // 3) traduzir
+    String translated = mt.translateLargeText(text, detectedLang, targetLang);
+
+    // 4) gravar arquivo de saída
     String outName = outFileName(file.getOriginalFilename(), targetLang, "txt");
-    storage.saveOutput(outName, translated.getBytes(StandardCharsets.UTF_8));
+
+    // Se seu StorageService.saveOutput() **devolve** o Path:
+    Path outPath = storage.saveOutput(outName, translated.getBytes(StandardCharsets.UTF_8));
+
+    // --- Se o seu saveOutput for void, use este fallback em vez da linha acima ---
+    // Path outPath = storage.outputPath(outName); // crie este método no StorageService, ou:
+    // Path outPath = Paths.get(System.getProperty("user.dir"), "data", "outputs", outName);
+
+    // 5) obter usuário autenticado (se existir)
+    Long userId = null;
+    try {
+      var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+      if (auth != null && auth.isAuthenticated()
+          && auth.getPrincipal() instanceof com.example.backend.security.UserDetailsImpl u) {
+        userId = u.getId();
+      }
+    } catch (Exception ignored) {}
+
+    // 6) salvar registro no banco
+    TranslationRecord rec = TranslationRecord.builder()
+        .originalFilename(file.getOriginalFilename())
+        .fileType(detectFileType(file.getOriginalFilename()))
+        .detectedLang(detectedLang)
+        .targetLang(targetLang)
+        .outputPath(outPath.toString())  // ex.: /app/data/outputs/Documento.es.txt
+        .build();
+
+    if (userId != null) {
+      var usr = new com.example.backend.entities.User();
+      usr.setId(userId);
+      rec.setUser(usr);
+    }
+    recordService.save(rec);
+
+    // 7) devolver o nome do arquivo (o controller já monta o /files/<nome>)
     return outName;
   }
 
+  // ---- helpers --------------------------------------------------------------
 
   private String extractText(Path path) {
     try (InputStream is = new BufferedInputStream(Files.newInputStream(path))) {
@@ -57,5 +97,15 @@ public class TranslationServiceImpl implements TranslationService {
     int dot = base.lastIndexOf('.');
     if (dot > 0) base = base.substring(0, dot);
     return base + "." + targetLang + "." + ext;
+  }
+
+  private String detectFileType(String name) {
+    if (name == null) return "TXT";
+    String n = name.toLowerCase();
+    if (n.endsWith(".pdf"))  return "PDF";
+    if (n.endsWith(".docx")) return "DOCX";
+    if (n.endsWith(".pptx")) return "PPTX";
+    if (n.endsWith(".txt"))  return "TXT";
+    return "FILE";
   }
 }

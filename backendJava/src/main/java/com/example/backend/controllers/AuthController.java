@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.backend.entity.Role;
-import com.example.backend.entity.RoleName;
-import com.example.backend.entity.User;
+import com.example.backend.entities.Role;
+import com.example.backend.entities.RoleName;
+import com.example.backend.entities.User;
 import com.example.backend.repositories.RoleRepository;
 import com.example.backend.repositories.UserRepository;
 import com.example.backend.security.JwtUtils;

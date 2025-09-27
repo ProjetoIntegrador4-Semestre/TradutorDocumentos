@@ -69,6 +69,8 @@ public class WebSecurityConfig {
         // liberar explicitamente POST e OPTIONS
         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
         .requestMatchers(HttpMethod.POST, "/translate-file").permitAll()
+        .requestMatchers("/languages").permitAll()
+        .requestMatchers("/records/**").authenticated()
 
         // swagger + h2 + auth
         .requestMatchers(
