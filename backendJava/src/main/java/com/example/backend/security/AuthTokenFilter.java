@@ -19,7 +19,6 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Component
 public class AuthTokenFilter extends OncePerRequestFilter {
@@ -59,13 +58,13 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                     Long id = jwtUtils.getUserIdFromJwtToken(jwt);
                     String username = jwtUtils.getUserNameFromJwtToken(jwt);
                     String email = jwtUtils.getEmailFromJwtToken(jwt);
-                    List<String> roles = jwtUtils.getRolesFromJwtToken(jwt);
+                    String role = jwtUtils.getRoleFromJwtToken(jwt); // agora só 1 role (String)
 
-                    List<SimpleGrantedAuthority> authorities = roles.stream()
-                            .map(SimpleGrantedAuthority::new)
-                            .collect(Collectors.toList());
+                    // authorities baseado na única role
+                    List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
 
-                    UserDetailsImpl userDetails = new UserDetailsImpl(id, username, email, null, authorities);
+                    // passa a role como String
+                    UserDetailsImpl userDetails = new UserDetailsImpl(id, username, email, null, role);
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
@@ -73,7 +72,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    logger.debug("✅ Autenticação configurada para usuário {} (roles: {})", email, roles);
+                    logger.debug("✅ Autenticação configurada para usuário {} (role: {})", email, role);
                 } else {
                     logger.warn("❌ Token inválido ou expirado para {}", path);
                 }

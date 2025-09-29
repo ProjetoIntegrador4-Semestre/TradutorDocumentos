@@ -1,9 +1,7 @@
 package com.example.backend.controllers;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.dto.translation.SigninRequest;
-import com.example.backend.entities.Role;
-import com.example.backend.entities.RoleName;
 import com.example.backend.entities.User;
-import com.example.backend.repositories.RoleRepository;
 import com.example.backend.repositories.UserRepository;
 import com.example.backend.security.JwtUtils;
 import com.example.backend.security.UserDetailsImpl;
@@ -31,19 +26,16 @@ import com.example.backend.security.UserDetailsImpl;
 public class AuthController {
     @Autowired
     AuthenticationManager authenticationManager;
-    
+
     @Autowired
     UserRepository userRepository;
-    
-    @Autowired
-    RoleRepository roleRepository;
-    
+
     @Autowired
     PasswordEncoder encoder;
-    
+
     @Autowired
     JwtUtils jwtUtils;
-    
+
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@RequestBody SigninRequest signinRequest) {
         Authentication authentication = authenticationManager.authenticate(
@@ -53,117 +45,86 @@ public class AuthController {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         String jwt = jwtUtils.generateJwtToken(userDetails);
 
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .collect(Collectors.toList());
-
+        // agora só temos 1 role em String
         return ResponseEntity.ok(new JwtResponse(
                 jwt,
                 userDetails.getId(),
-                userDetails.getUsername(),  // você pode adicionar também o email aqui se quiser
-                roles
+                userDetails.getEmail(),
+                userDetails.getRole()
         ));
     }
 
-    
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@RequestBody SignupRequest signUpRequest) {
         if (userRepository.findByUsername(signUpRequest.getUsername()).isPresent()) {
             return ResponseEntity.badRequest().body("Error: Username is already taken!");
         }
         if (userRepository.findByEmail(signUpRequest.getEmail()).isPresent()) {
-        return ResponseEntity.badRequest().body("Error: Email is already in use!");
+            return ResponseEntity.badRequest().body("Error: Email is already in use!");
         }
-        
-        User user = new User(signUpRequest.getUsername(), encoder.encode(signUpRequest.getPassword()));
+
+        User user = new User();
+        user.setUsername(signUpRequest.getUsername());
+        user.setPassword(encoder.encode(signUpRequest.getPassword()));
         user.setEmail(signUpRequest.getEmail());
-        
-        Set<String> strRoles = signUpRequest.getRole();
-        Set<Role> roles = new HashSet<>();
-        
-        if (strRoles == null) {
-            Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-            roles.add(userRole);
-        } else {
-            strRoles.forEach(role -> {
-                switch (role) {
-                    case "admin":
-                        Role adminRole = roleRepository.findByName(RoleName.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(adminRole);
-                        break;
-                    default:
-                        Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(userRole);
-                }
-            });
-        }
-        
-        user.setRoles(roles);
+
+        // se não veio role, define "user" como padrão
+        String role = (signUpRequest.getRole() == null || signUpRequest.getRole().isEmpty())
+                ? "user"
+                : signUpRequest.getRole().iterator().next();
+
+        user.setRole(role.toLowerCase()); // normaliza
         userRepository.save(user);
-        
+
         return ResponseEntity.ok("User registered successfully!");
     }
-    
-    public static class LoginRequest {
+
+    public static class SignupRequest {
         private String username;
+        private String email;
         private String password;
-        
+        private Set<String> role;
+
         public String getUsername() { return username; }
         public void setUsername(String username) { this.username = username; }
-        
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
+
+        public Set<String> getRole() { return this.role; }
+        public void setRole(Set<String> role) { this.role = role; }
     }
-    
-    public static class SignupRequest {
-    private String username;
-    private String email;   
-    private String password;
-    private Set<String> role;
 
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-
-    public Set<String> getRole() { return this.role; }
-    public void setRole(Set<String> role) { this.role = role; }
-}
-    
     public static class JwtResponse {
         private String token;
         private String type = "Bearer";
         private Long id;
-        private String username;
-        private List<String> roles;
-        
-        public JwtResponse(String accessToken, Long id, String username, List<String> roles) {
+        private String email;
+        private String role;
+
+        public JwtResponse(String accessToken, Long id, String email, String role) {
             this.token = accessToken;
             this.id = id;
-            this.username = username;
-            this.roles = roles;
+            this.email = email;
+            this.role = role;
         }
-        
+
         public String getAccessToken() { return token; }
         public void setAccessToken(String accessToken) { this.token = accessToken; }
-        
+
         public String getTokenType() { return type; }
         public void setTokenType(String tokenType) { this.type = tokenType; }
-        
+
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
-        
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        
-        public List<String> getRoles() { return roles; }
-        public void setRoles(List<String> roles) { this.roles = roles; }
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
     }
 }
