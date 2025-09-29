@@ -59,7 +59,6 @@ public class WebSecurityConfig {
     return source;
   }
 
-  // ✅ Define o filtro JWT como bean
   @Bean
   public AuthTokenFilter authTokenFilter() {
     return new AuthTokenFilter();
@@ -75,27 +74,30 @@ public class WebSecurityConfig {
         .authorizeHttpRequests(auth -> auth
           .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-          // 🔒 precisa estar autenticado
-          .requestMatchers(HttpMethod.POST, "/translate-file").authenticated()
-          .requestMatchers("/records/**").authenticated()
-
-          // 🌍 abertos
+          // ✅ Endpoints abertos
           .requestMatchers(
-          "/",
-          "/files/**",
-          "/api/auth/**",
-          "/h2-console/**",
-          "/swagger-ui.html", "/swagger-ui/**",
-          "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml",
-          "/swagger-resources", "/swagger-resources/**"
+            "/",
+            "/files/**",
+            "/api/auth/**",
+            "/h2-console/**",
+            "/swagger-ui.html", "/swagger-ui/**",
+            "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml",
+            "/swagger-resources", "/swagger-resources/**"
           ).permitAll()
 
+          // ✅ Proteção por role
+          .requestMatchers("/api/test/admin").hasRole("ADMIN")
+          .requestMatchers("/api/test/user").hasRole("USER")
+          .requestMatchers("/api/test/all").authenticated()
+
+          // ✅ Proteção de records e traduções
+          .requestMatchers(HttpMethod.POST, "/translate-file").authenticated()
+          .requestMatchers("/records/**").authenticated()
 
           // qualquer outro endpoint precisa estar logado
           .anyRequest().authenticated()
         );
 
-      // 🔑 registra o filtro JWT antes do UsernamePasswordAuthenticationFilter
       http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
       return http.build();
