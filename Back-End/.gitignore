@@ -1,2 +1,23 @@
+# caches python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# caches de ferramentas
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.pyre/
+.ipynb_checkpoints/
+.cache/
+
+# env
 .env
-__pycache__
+.env.*
+
+# temporários do projeto
+Back-End/temp/
+temp/
+!/Back-End/temp/.gitkeep
+!temp/.gitkeep
