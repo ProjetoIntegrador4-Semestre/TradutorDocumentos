@@ -1,3 +1,4 @@
+// app/(auth)/login.tsx
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { Link, useRouter } from "expo-router";
@@ -6,7 +7,7 @@ import GoogleButton from "../../components/GoogleButton";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -59,15 +60,9 @@ export default function Login() {
         secure
       />
 
-      {/* Esqueci minha senha */}
       <View style={{ alignItems: "flex-end", marginTop: 6 }}>
-        <TouchableOpacity
-          onPress={() => router.push("/(auth)/forgot")}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={{ color: "#2b64ff", fontWeight: "600" }}>
-            Esqueci minha senha
-          </Text>
+        <TouchableOpacity onPress={() => router.push("/(auth)/forgot")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={{ color: "#2b64ff", fontWeight: "600" }}>Esqueci minha senha</Text>
         </TouchableOpacity>
       </View>
 
@@ -95,7 +90,16 @@ export default function Login() {
         <View style={{ flex: 1, height: 1, backgroundColor: "#cfcfcf" }} />
       </View>
 
-      <GoogleButton onPress={() => Alert.alert("Google", "Integrar Google Sign-In aqui")} />
+      <GoogleButton
+        title="LOGIN COM GOOGLE"
+        onPress={async () => {
+          try {
+            await signInWithGoogle();
+          } catch (e: any) {
+            Alert.alert("Google", e?.message ?? "Falha no login com Google");
+          }
+        }}
+      />
     </View>
   );
 }

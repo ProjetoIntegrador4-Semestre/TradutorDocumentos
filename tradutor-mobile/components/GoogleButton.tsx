@@ -1,14 +1,35 @@
+// components/GoogleButton.tsx
 import React from "react";
-import { TouchableOpacity, View, Text } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { TouchableOpacity, View, Text, Image } from "react-native";
 
-export default function GoogleButton({ title = "LOGIN COM GOOGLE", onPress }: { title?: string; onPress?: () => void }) {
+export default function GoogleButton({
+  onPress,
+  title = "LOGIN COM GOOGLE",
+}: {
+  onPress?: () => void;
+  title?: string;
+}) {
   return (
-    <TouchableOpacity onPress={onPress} style={{ borderWidth: 1, borderColor: "#111", borderRadius: 8, paddingVertical: 12, alignItems: "center" }}>
-      <View style={{ flexDirection: "row", alignItems: "center", columnGap: 8 }}>
-        <Ionicons name="logo-google" size={18} color="#111" />
-        <Text style={{ fontWeight: "600" }}>{title}</Text>
-      </View>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={{
+        borderWidth: 1,
+        borderColor: "#ddd",
+        backgroundColor: "#fff",
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: 8,
+      }}
+    >
+      <Image
+        source={{ uri: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" }}
+        style={{ width: 18, height: 18 }}
+      />
+      <Text style={{ fontWeight: "700", color: "#333" }}>{title}</Text>
     </TouchableOpacity>
   );
 }

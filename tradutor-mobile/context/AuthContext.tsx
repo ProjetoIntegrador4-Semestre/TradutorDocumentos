@@ -1,16 +1,22 @@
+// context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { Platform } from "react-native";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import { BASE_URL } from "../lib/api";
 import { ApiError } from "../lib/api";
 import { getAuth, saveAuth, clearAuth } from "../lib/storage";
 
 type User = { id?: string; name?: string; email: string };
 
-/*******  d323c8f0-99d4-4b0a-96eb-9e4fc8ac9198  *******/type AuthCtx = {
+type AuthCtx = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  completeSocialLogin: (token: string, email?: string | null) => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -19,7 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // carrega sessão
   useEffect(() => {
     (async () => {
       try {
@@ -32,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // LOGIN: /auth/login (x-www-form-urlencoded)
+  // ---------- EMAIL/SENHA ----------
   async function signIn(email: string, password: string) {
     const body = new URLSearchParams({
       grant_type: "password",
@@ -60,7 +65,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
   }
 
-  // CADASTRO: /auth/register (JSON { email, password, role })
   async function signUp(name: string, email: string, password: string) {
     const res = await fetch(`${BASE_URL}/auth/register`, {
       method: "POST",
@@ -71,7 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let data: any = null; try { data = await res.json(); } catch {}
     if (!res.ok) throw new ApiError(data?.message || data?.detail || `Erro ${res.status}`, res.status, data);
 
-    // se o cadastro não retornar token, faz login em seguida
     await signIn(email, password);
   }
 
@@ -80,7 +83,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }
 
-  const value = useMemo(() => ({ user, loading, signIn, signUp, signOut }), [user, loading]);
+  // ---------- GOOGLE ----------
+  // salva token vindo do callback e cria o usuário local
+  async function completeSocialLogin(token: string, email?: string | null) {
+    const u: User = { email: email ?? "email@desconhecido.com", name: "Usuário(a)" };
+    await saveAuth(token, u, null);
+    setUser(u);
+  }
+
+  async function signInWithGoogle() {
+    // URL de retorno:
+    // - Web: usa a origem atual (porta correta, ex. 8081)
+    // - Nativo: usa um deep link do app (expo-router)
+    const redirectUri =
+      Platform.OS === "web"
+        ? `${window.location.origin}/oauth-google`
+        : Linking.createURL("/oauth-google");
+
+    const authUrl = `${BASE_URL}/auth/google/login?redirect=${encodeURIComponent(redirectUri)}`;
+
+    if (Platform.OS === "web") {
+      // abre na mesma aba; o backend vai redirecionar de volta para /oauth-google
+      window.location.href = authUrl;
+      return;
+    }
+
+    // Em nativo, abrimos a sessão e capturamos a URL de retorno
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+    if (result.type === "success" && result.url) {
+      const parsed = Linking.parse(result.url);
+      const qp = parsed.queryParams || {};
+
+      let token = (qp.access_token || qp.token) as string | undefined;
+      let email = (qp.email as string | undefined) ?? null;
+
+      // fallback: caso o backend devolva no hash #access_token
+      if (!token) {
+        try {
+          const url = new URL(result.url);
+          const h = new URLSearchParams(url.hash.replace(/^#/, ""));
+          token = token || (h.get("access_token") ?? h.get("token") ?? undefined);
+          email = email || h.get("email");
+        } catch {}
+      }
+
+      if (!token) throw new Error("Token ausente no retorno do Google.");
+      await completeSocialLogin(token, email);
+    } else {
+      throw new Error("Login com Google cancelado.");
+    }
+  }
+
+  const value = useMemo(
+    () => ({ user, loading, signIn, signUp, signOut, signInWithGoogle, completeSocialLogin }),
+    [user, loading]
+  );
+
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
