@@ -23,83 +23,91 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfig {
 
-  private final UserDetailsServiceImpl userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
-  public WebSecurityConfig(UserDetailsServiceImpl userDetailsService) {
-    this.userDetailsService = userDetailsService;
-  }
+    public WebSecurityConfig(UserDetailsServiceImpl userDetailsService,
+                             OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) {
+        this.userDetailsService = userDetailsService;
+        this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
+    }
 
-  @Bean
-  public DaoAuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
-    DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-    authProvider.setUserDetailsService(userDetailsService);
-    authProvider.setPasswordEncoder(passwordEncoder);
-    return authProvider;
-  }
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder);
+        return authProvider;
+    }
 
-  @Bean
-  public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-    return authConfig.getAuthenticationManager();
-  }
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
 
-  @Bean
-  public PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder();
-  }
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-  @Bean
-  public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration cfg = new CorsConfiguration();
-    cfg.setAllowedOrigins(List.of("http://localhost:8080", "http://localhost:3000", "http://localhost:8081"));
-    cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    cfg.setAllowedHeaders(List.of("*"));
-    cfg.setAllowCredentials(true);
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", cfg);
-    return source;
-  }
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration cfg = new CorsConfiguration();
+        cfg.setAllowedOrigins(List.of("http://localhost:8080", "http://localhost:3000", "http://localhost:8081"));
+        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        cfg.setAllowedHeaders(List.of("*"));
+        cfg.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", cfg);
+        return source;
+    }
 
-  @Bean
-  public AuthTokenFilter authTokenFilter() {
-    return new AuthTokenFilter();
-  }
+    @Bean
+    public AuthTokenFilter authTokenFilter() {
+        return new AuthTokenFilter();
+    }
 
-  @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http, AuthTokenFilter authTokenFilter) throws Exception {
-      http
-        .cors(c -> c.configurationSource(corsConfigurationSource()))
-        .csrf(csrf -> csrf.disable())
-        .headers(h -> h.frameOptions(f -> f.disable()))
-        .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(auth -> auth
-          .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http, AuthTokenFilter authTokenFilter) throws Exception {
+        http
+            .cors(c -> c.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .headers(h -> h.frameOptions(f -> f.disable()))
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-          // ✅ Endpoints abertos
-          .requestMatchers(
-            "/",
-            "/files/**",
-            "/api/auth/**",
-            "/h2-console/**",
-            "/swagger-ui.html", "/swagger-ui/**",
-            "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml",
-            "/swagger-resources", "/swagger-resources/**"
-          ).permitAll()
+                // ✅ Endpoints abertos
+                .requestMatchers(
+                    "/",
+                    "/files/**",
+                    "/api/auth/**",
+                    "/api/auth/google/**",   // 🔑 fluxo do Google OAuth
+                    "/h2-console/**",
+                    "/swagger-ui.html", "/swagger-ui/**",
+                    "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml",
+                    "/swagger-resources", "/swagger-resources/**"
+                ).permitAll()
 
-          // ✅ Proteção por role
-          .requestMatchers("/api/test/admin").hasRole("ADMIN")
-          .requestMatchers("/api/test/user").hasRole("USER")
-          .requestMatchers("/api/test/all").authenticated()
+                // ✅ Proteção por role
+                .requestMatchers("/api/test/admin").hasRole("ADMIN")
+                .requestMatchers("/api/test/user").hasRole("USER")
+                .requestMatchers("/api/test/all").authenticated()
 
-          // ✅ Proteção de records e traduções
-          .requestMatchers(HttpMethod.POST, "/translate-file").authenticated()
-          .requestMatchers("/records/**").authenticated()
+                // ✅ Proteção de records e traduções
+                .requestMatchers(HttpMethod.POST, "/translate-file").authenticated()
+                .requestMatchers("/records/**").authenticated()
 
-          // qualquer outro endpoint precisa estar logado
-          .anyRequest().authenticated()
-        );
+                // qualquer outro endpoint precisa estar logado
+                .anyRequest().authenticated()
+            )
+            // 🔑 habilita OAuth2 Login (Google) + handler customizado
+            .oauth2Login(oauth -> oauth
+                .successHandler(oAuth2LoginSuccessHandler) // gera token e salva usuário
+            );
 
-      http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
-      return http.build();
-  }
+        return http.build();
+    }
 }

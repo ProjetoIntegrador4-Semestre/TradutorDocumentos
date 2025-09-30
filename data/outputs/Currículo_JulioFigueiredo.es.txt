@@ -1,0 +1,119 @@
+Julio Figueiredo
+
+Aluno Senai (ADS) y Analista de Datos en la 2RPNET
+
+Sorocaba, São Paulo, Brasil
+
+Contacto
+
+ (15) 988002079
+
+ Julioo. 1amorim@gmail. com
+
+ https://www.linkedin.com/in/julio-figueiredo-1772932a6/
+
+ https://github. con/JulioFigueiredo
+
+
+
+Objetivo profesional
+
+Actuar como analistas de datos, aplicando Python, SQL y Power BI para análisis
+
+y visualización de datos, o como Desarrollador Backend, creando APIs y
+
+automaciones.
+
+
+
+
+
+Experiencia
+
+2RPNET
+
+Analista de Datos
+
+Marzo de 2024 – el momento
+
+Trabajar en squads con la metodología ágil Scrum
+
+ Pegaborei en squad ágil utilizando la metodología Scrum para el
+
+desarrollo de aplicaciones.
+
+ Desenvolvi un juego simple en Java como ejercicio práctico de lógica y
+
+orientación a objetos.
+
+ Participé en la creación de pipelines de datos con PySpark e Hive en Google
+
+Cloud Platform (GCP).
+
+ Use SQL para consultas analíticas, apoyando la toma de decisiones del
+
+equipo de negocios.
+
+ Exploración práctica de Docker y FastAPI para ampliar conocimientos en
+
+backend y contenedores.
+
+
+
+
+
+
+
+mailto:julioo. 1amorim@gmail. com
+https://www.linkedin.com/in/julio-figueiredo-1772932a6/
+
+
+
+
+
+
+
+
+Formación Académica
+
+
+
+Senai Gaspar Ricardo Junior
+
+Curso Superior de Tecnología (CST), Análisis y Desarrollo de
+
+Sistemas · (enero de 2024 - diciembre de 2025)
+
+
+
+Senai Gaspar Ricardo Junior
+
+Enseñanza técnica, Mecatrónica · (enero de 2022 - 2023)
+
+
+
+Principales Competencias
+
+& Herramientas: Python, SQL, Java, C#, Git/Github
+
+Bigdata: Pyspark, HiveSQL, GCP
+
+Visualización y BI: PowerBI
+
+Desarrollo: ASP.NET, FastAPI, Docker
+
+Metologías: Scrum
+
+Cloud: AWS, GCP
+
+
+
+
+
+Idiomas
+
+Inglés - Avanzado
+
+
+
+
