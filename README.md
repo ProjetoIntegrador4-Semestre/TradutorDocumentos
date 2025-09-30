@@ -144,7 +144,8 @@ O sistema será desenvolvido do zero, com backend, frontend web e aplicação mo
 ## 9. Possivel diagrama de serviços da nuvem
 
 
-<img width="942" height="488" alt="image" src="https://github.com/user-attachments/assets/50008fcf-0112-4c0d-9edd-8fef14fd3966" />
+<img width="782" height="503" alt="Captura de tela 2025-09-22 202043" src="https://github.com/user-attachments/assets/90baf9f9-8160-40cf-9d2b-ba62bc72057a" />
+
 
 
 ## 10. Cronograma de Marcos
