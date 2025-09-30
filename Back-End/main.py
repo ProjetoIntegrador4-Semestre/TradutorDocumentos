@@ -11,7 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config.settings import settings  
 from fastapi.middleware.cors import CORSMiddleware
 
-origins = ["http://localhost:5173"]
+origins = ["http://localhost:5173", "http://localhost:8081"]
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "Translation API")
 app = FastAPI(title=PROJECT_NAME, swagger_ui_parameters={"persistAuthorization": True},)

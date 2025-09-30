@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -13,44 +14,48 @@ from app.config.settings import settings
 
 router = APIRouter(prefix="/auth/google", tags=["auth-google"])
 
-# Config do front (pode ficar vazio em dev/backend-only)
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-FRONTEND_REDIRECT_PATH = os.getenv("FRONTEND_REDIRECT_PATH", "/oauth/callback")
-FRONTEND_MODE = os.getenv("FRONTEND_MODE", "").lower()  # "disabled" para forçar JSON
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")                     # ex.: "http://localhost:8081"
+FRONTEND_REDIRECT_PATH = os.getenv("FRONTEND_REDIRECT_PATH", "/oauth-google")
+# Para forçar resposta em JSON (sem redirecionar), defina FRONTEND_MODE=disabled
+FRONTEND_MODE = os.getenv("FRONTEND_MODE", "").lower()
 
 logger = logging.getLogger(__name__)
 
+
 def _backend_only_mode(request: Request) -> bool:
-    # Ativa modo JSON se:
-    # - query param raw=1
-    # - FRONTEND_MODE=disabled
-    # - faltam FRONTEND_URL ou FRONTEND_REDIRECT_PATH
-    raw = request.query_params.get("raw")
-    if raw == "1":
+    """Retorna True quando devemos responder em JSON em vez de redirecionar."""
+    # query param raw=1 força JSON
+    if request.query_params.get("raw") == "1":
         return True
+    # variável de ambiente força JSON
     if FRONTEND_MODE == "disabled":
         return True
-    if not FRONTEND_URL or not FRONTEND_REDIRECT_PATH:
+    # Se não temos nem FRONTEND_URL/DEFAULT_PATH nem redirect salvo em sessão,
+    # não temos para onde redirecionar: mantém JSON.
+    if not FRONTEND_URL and not request.session.get("oauth_redirect_to"):
         return True
     return False
 
+
 @router.get("/login")
-async def google_login(request: Request):
+async def google_login(request: Request, redirect: str | None = None):
     """
     Inicia o OAuth no Google.
     Aceita ?redirect=<url_do_front> para guardar na sessão e priorizar no callback.
     """
-    redirect_to = request.query_params.get("redirect")
-    if redirect_to:
-        request.session["oauth_redirect_to"] = redirect_to
+    if redirect:
+        # salva o destino para usar no callback
+        request.session["oauth_redirect_to"] = redirect
 
-    # URL de callback do PRÓPRIO backend (deve estar no Google Console)
-    redirect_uri = settings.GOOGLE_REDIRECT_URI  # ex.: http://localhost:8000/auth/google/callback
+    # URL de callback do PRÓPRIO backend (deve estar registrada no Google Console)
+    # Ex.: http://localhost:8000/auth/google/callback
+    redirect_uri = settings.GOOGLE_REDIRECT_URI
     return await oauth.google.authorize_redirect(request, redirect_uri)
+
 
 @router.get("/callback")
 async def google_callback(request: Request, db: Session = Depends(get_db)):
-    # 1) Troca code -> token (instrumentado p/ mostrar erro real se falhar)
+    # 1) Troca code -> token
     try:
         token = await oauth.google.authorize_access_token(request)
     except Exception as e:
@@ -63,7 +68,7 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
 
     # 2) Userinfo
     try:
-        userinfo = token.get("userinfo")
+        userinfo = token.get("userinfo") if isinstance(token, dict) else None
         if not userinfo:
             resp = await oauth.google.get("userinfo", token=token)
             userinfo = resp.json()
@@ -71,7 +76,8 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         logger.exception("Fetching userinfo failed")
         return JSONResponse({"error": "userinfo_failed", "detail": str(e)}, status_code=500)
 
-    email = userinfo.get("email")
+    email = (userinfo or {}).get("email")
+    name = (userinfo or {}).get("name")
     if not email:
         raise HTTPException(status_code=400, detail="Google não retornou e-mail verificado.")
 
@@ -83,26 +89,35 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
+    # 4) Gera JWT local
     jwt_str = create_access_token({"sub": email, "role": getattr(user, "role", "user")})
 
-    # 4) Se estiver em modo backend-only → devolve JSON em vez de redirecionar
+    # 5) Se estivermos em modo backend-only, devolve JSON (comporta-se como antes)
     if _backend_only_mode(request):
         return JSONResponse(
             {
                 "access_token": jwt_str,
                 "token_type": "bearer",
                 "email": email,
-                "name": userinfo.get("name"),
+                "name": name,
                 "backend_only": True,
             }
         )
 
-    # 5) Redireciono para o front quando houver
+    # 6) Monta URL de redirecionamento para o front
     redirect_override = request.session.pop("oauth_redirect_to", None)
-    base = FRONTEND_URL.rstrip("/") + "/"
-    path = (redirect_override or FRONTEND_REDIRECT_PATH).lstrip("/")
-    frontend_cb = urljoin(base, path)
-    redirect_url = f"{frontend_cb}#access_token={jwt_str}&token_type=bearer"
-    logger.info("OAuth Google redirect -> %s", redirect_url)
-    return JSONResponse({"access_token": jwt_str, "token_type": "bearer", "email": email})
+    if redirect_override:
+        frontend_cb = redirect_override
+    else:
+        base = FRONTEND_URL.rstrip("/") + "/" if FRONTEND_URL else ""
+        path = FRONTEND_REDIRECT_PATH.lstrip("/")
+        frontend_cb = urljoin(base, path) if base else ""
 
+    # Preferimos devolver no hash (#) para não expor o token nos logs de servidor/proxy
+    if frontend_cb:
+        redirect_url = f"{frontend_cb}#access_token={jwt_str}&token_type=bearer&email={email}"
+        logger.info("OAuth Google redirect -> %s", redirect_url)
+        return RedirectResponse(redirect_url, status_code=302)
+
+    # Fallback final: Se ainda assim não temos destino, responde JSON
+    return JSONResponse({"access_token": jwt_str, "token_type": "bearer", "email": email, "name": name})
