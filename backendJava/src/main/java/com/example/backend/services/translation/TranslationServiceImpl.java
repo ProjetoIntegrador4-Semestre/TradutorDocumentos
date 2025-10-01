@@ -1,14 +1,9 @@
 package com.example.backend.services.translation;
 
-import java.io.BufferedInputStream;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.parser.AutoDetectParser;
-import org.apache.tika.sax.BodyContentHandler;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,8 +36,8 @@ public class TranslationServiceImpl implements TranslationService {
     // 1) Salva upload físico
     Path uploaded = storage.saveUpload(file);
 
-    // 2) Extrai texto
-    String text = extractText(uploaded);
+    // 2) Extrai texto (sem POI/Tika para DOCX/PPTX)
+    String text = extractText(uploaded, file.getOriginalFilename(), file.getContentType());
     if (text == null || text.isBlank()) {
       text = "(sem conteúdo detectável)";
     }
@@ -59,8 +54,8 @@ public class TranslationServiceImpl implements TranslationService {
     final String originalName = sanitizeFilename(file.getOriginalFilename());
     String ext = getExtensionSafe(originalName);
     if (ext == null) {
-      ext = mapMimeToExt(file.getContentType()); // tenta pelo MIME
-      if (ext == null) ext = "txt";              // fallback final
+      ext = mapMimeToExt(file.getContentType());
+      if (ext == null) ext = "txt";
     }
 
     // 6) Gera bytes no mesmo formato do input
@@ -94,19 +89,119 @@ public class TranslationServiceImpl implements TranslationService {
     return outName;
   }
 
-  // ---- helpers --------------------------------------------------------------
+  // ========= EXTRAÇÃO DE TEXTO (DOCX/PPTX 100% JDK; PDF/TXT simples) ========
 
-  private String extractText(Path path) {
-    try (InputStream is = new BufferedInputStream(Files.newInputStream(path))) {
-      var parser = new AutoDetectParser();
-      var handler = new BodyContentHandler(-1);
-      var metadata = new Metadata();
-      parser.parse(is, handler, metadata);
-      return handler.toString();
+  private String extractText(Path path, String originalName, String contentType) {
+    String name = originalName == null ? "" : originalName.toLowerCase();
+    String ct   = contentType  == null ? "" : contentType.toLowerCase();
+
+    try {
+      if (name.endsWith(".docx") || ct.contains("officedocument.wordprocessingml.document") || isOOXMLDocx(path)) {
+        return extractTextDocxViaZip(path);
+      }
+      if (name.endsWith(".pptx") || ct.contains("officedocument.presentationml.presentation") || isOOXMLPptx(path)) {
+        return extractTextPptxViaZip(path);
+      }
+      if (name.endsWith(".pdf") || ct.contains("application/pdf") || isPdf(path)) {
+        // Pode trocar por PDFBox se quiser texto real; para isolar o erro, deixo vazio
+        return "";
+      }
+      if (name.endsWith(".txt") || ct.startsWith("text/")) {
+        return Files.readString(path);
+      }
+      return "";
     } catch (Exception e) {
-      throw new RuntimeException("Falha ao extrair texto com Tika", e);
+      throw new RuntimeException("Falha ao extrair texto", e);
     }
   }
+
+  /** DOCX: lê /word/document.xml e remove tags XML (sem POI). */
+  private String extractTextDocxViaZip(Path path) throws java.io.IOException {
+    StringBuilder sb = new StringBuilder(4096);
+    try (var zis = new java.util.zip.ZipInputStream(Files.newInputStream(path))) {
+      java.util.zip.ZipEntry e;
+      while ((e = zis.getNextEntry()) != null) {
+        if ("word/document.xml".equalsIgnoreCase(e.getName())) {
+          String xml = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
+          sb.append(xmlToPlain(xml));
+          break;
+        }
+      }
+    }
+    return sb.toString();
+  }
+
+  /** PPTX: lê /ppt/slides/slideN.xml em ordem e concatena texto (sem POI). */
+  private String extractTextPptxViaZip(Path path) throws java.io.IOException {
+    java.util.Map<Integer,String> slides = new java.util.TreeMap<>();
+    try (var zis = new java.util.zip.ZipInputStream(Files.newInputStream(path))) {
+      java.util.zip.ZipEntry e;
+      while ((e = zis.getNextEntry()) != null) {
+        String name = e.getName();
+        if (name.startsWith("ppt/slides/slide") && name.endsWith(".xml")) {
+          String xml = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
+          slides.put(parseSlideNumber(name), xmlToPlain(xml));
+        }
+      }
+    }
+    StringBuilder sb = new StringBuilder(4096);
+    for (var part : slides.values()) {
+      sb.append(part).append(System.lineSeparator());
+    }
+    return sb.toString();
+  }
+
+  private int parseSlideNumber(String name) {
+    // "ppt/slides/slide12.xml" -> 12
+    try {
+      String base = name.substring(name.lastIndexOf('/') + 1); // slide12.xml
+      String num  = base.substring(5, base.length() - 4);
+      return Integer.parseInt(num);
+    } catch (Exception ignore) {
+      return Integer.MAX_VALUE;
+    }
+  }
+
+  /** Remove tags e desescapa entidades XML básicas. */
+  private String xmlToPlain(String xml) {
+    if (xml == null || xml.isBlank()) return "";
+    String s = xml.replaceAll("(?s)<[^>]+>", " "); // remove tags
+    s = s.replace("&amp;", "&")
+         .replace("&lt;", "<")
+         .replace("&gt;", ">")
+         .replace("&quot;", "\"")
+         .replace("&apos;", "'");
+    return s.replaceAll("[ \\t\\x0B\\f\\r]+", " ")
+            .replaceAll(" *\\n *", "\n")
+            .trim();
+  }
+
+  private boolean isPdf(Path path) {
+    try (var is = Files.newInputStream(path)) {
+      byte[] header = is.readNBytes(5);
+      return header.length >= 5 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F' && header[4] == '-';
+    } catch (Exception ignored) { return false; }
+  }
+
+  private boolean isOOXMLDocx(Path path) {
+    return zipHasEntry(path, "word/document.xml");
+  }
+
+  private boolean isOOXMLPptx(Path path) {
+    return zipHasEntry(path, "ppt/presentation.xml");
+  }
+
+  private boolean zipHasEntry(Path path, String entry) {
+    try (var zis = new java.util.zip.ZipInputStream(Files.newInputStream(path))) {
+      java.util.zip.ZipEntry e;
+      while ((e = zis.getNextEntry()) != null) {
+        if (e.getName().equalsIgnoreCase(entry)) return true;
+      }
+    } catch (Exception ignored) {}
+    return false;
+  }
+
+  // ========= HELPERS DE NOME/EXTENSÃO =======================================
 
   private String getExtensionSafe(String name) {
     if (name == null || name.isBlank()) return null;
@@ -128,7 +223,6 @@ public class TranslationServiceImpl implements TranslationService {
 
   private String sanitizeFilename(String name) {
     if (name == null) return null;
-    // remove caracteres que podem confundir FS / nginx / S3, mas mantém extensão
     return name.replaceAll("[\\r\\n\\t]", " ")
                .replaceAll("[\\\\/:*?\"<>|]", "_")
                .trim();
