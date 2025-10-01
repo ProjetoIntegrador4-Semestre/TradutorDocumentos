@@ -62,10 +62,6 @@ public class WebSecurityConfig {
         return source;
     }
 
-    @Bean
-    public AuthTokenFilter authTokenFilter() {
-        return new AuthTokenFilter();
-    }
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, AuthTokenFilter authTokenFilter) throws Exception {

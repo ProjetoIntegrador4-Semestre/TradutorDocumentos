@@ -136,7 +136,20 @@
             <scope>test</scope>
         </dependency>
 
-    
+                <!-- Apache POI (DOCX/PPTX) -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.3.0</version>
+        </dependency>
+
+        <!-- PDFBox -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.32</version>
+        </dependency>
+
 
     </dependencies>
 
