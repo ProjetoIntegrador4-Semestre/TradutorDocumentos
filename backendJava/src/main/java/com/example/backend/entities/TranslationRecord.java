@@ -27,6 +27,9 @@ public class TranslationRecord {
   @Column(name = "target_lang", length = 8, nullable = false)
   private String targetLang;
 
+  @Column(name = "file_size_bytes")
+    private Long fileSizeBytes;   
+
   @Column(name = "output_path", length = 512)
   private String outputPath;             // caminho do arquivo gerado (ex.: data/outputs/xxx.txt)
 

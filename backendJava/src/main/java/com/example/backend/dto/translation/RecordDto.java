@@ -12,5 +12,6 @@ public class RecordDto {
   private String detectedLang;
   private String targetLang;
   private Instant createdAt;
+  Long sizeBytes;
   private String downloadUrl; // ex.: /files/<nome>  (ou presigned no S3 futuramente)
 }

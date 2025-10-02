@@ -36,6 +36,7 @@ public class TranslationRecordServiceImpl implements TranslationRecordService {
         .targetLang(r.getTargetLang())
         .createdAt(r.getCreatedAt())
         .downloadUrl(r.getOutputPath() == null ? null : "/files/" + r.getOutputPath().substring(r.getOutputPath().lastIndexOf('/') + 1))
+        .sizeBytes(r.getFileSizeBytes())
         .build()
     ).toList();
   }

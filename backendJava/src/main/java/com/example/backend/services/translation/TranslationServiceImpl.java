@@ -74,6 +74,8 @@ public class TranslationServiceImpl implements TranslationService {
     // 8) Usuário (pode ser null)
     User user = userRepository.findByEmail(username).orElse(null);
 
+    long size = file.getSize();
+
     // 9) Registro
     TranslationRecord rec = TranslationRecord.builder()
         .originalFilename(originalName)
@@ -81,6 +83,7 @@ public class TranslationServiceImpl implements TranslationService {
         .detectedLang(detectedLang)
         .targetLang(targetLang)
         .outputPath(outPath.toString())
+        .fileSizeBytes(size)               
         .user(user)
         .build();
     recordService.save(rec);
