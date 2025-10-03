@@ -33,24 +33,24 @@ public class TranslationServiceImpl implements TranslationService {
 
   @Override
   public String translate(MultipartFile file, String sourceLang, String targetLang, String username) {
-    // 1) Salva upload físico
+    // 1) salva upload
     Path uploaded = storage.saveUpload(file);
 
-    // 2) Extrai texto (sem POI/Tika para DOCX/PPTX)
+    // 2) extrai texto conforme o tipo
     String text = extractText(uploaded, file.getOriginalFilename(), file.getContentType());
     if (text == null || text.isBlank()) {
       text = "(sem conteúdo detectável)";
     }
 
-    // 3) Detecta idioma (se não vier)
+    // 3) detecta idioma (se não informado)
     String detectedLang = (sourceLang == null || sourceLang.isBlank())
         ? mt.detectLanguage(text)
         : sourceLang;
 
-    // 4) Tradução
+    // 4) traduz
     String translated = mt.translateLargeText(text, detectedLang, targetLang);
 
-    // 5) Decide extensão de saída a partir do nome OU do MIME
+    // 5) decide extensão do output com base no input
     final String originalName = sanitizeFilename(file.getOriginalFilename());
     String ext = getExtensionSafe(originalName);
     if (ext == null) {
@@ -58,7 +58,7 @@ public class TranslationServiceImpl implements TranslationService {
       if (ext == null) ext = "txt";
     }
 
-    // 6) Gera bytes no mesmo formato do input
+    // 6) gera bytes no mesmo formato
     byte[] bytesOut = switch (ext.toLowerCase()) {
       case "docx" -> docxGenerator.generateFromPlainText(translated);
       case "pptx" -> pptxGenerator.generateFromPlainText(translated);
@@ -67,32 +67,32 @@ public class TranslationServiceImpl implements TranslationService {
       default     -> translated.getBytes(StandardCharsets.UTF_8);
     };
 
-    // 7) Salva arquivo de saída COM A MESMA EXTENSÃO
+    // 7) salva saída
     String outName = outFileName(originalName, targetLang, ext);
     Path outPath = storage.saveOutput(outName, bytesOut);
 
-    // 8) Usuário (pode ser null)
+    // 8) usuário (opcional)
     User user = userRepository.findByEmail(username).orElse(null);
 
     long size = file.getSize();
 
-    // 9) Registro
+    // 9) registra no banco
     TranslationRecord rec = TranslationRecord.builder()
         .originalFilename(originalName)
         .fileType(detectFileType(originalName))
         .detectedLang(detectedLang)
         .targetLang(targetLang)
         .outputPath(outPath.toString())
-        .fileSizeBytes(size)               
+        .fileSizeBytes(size)
         .user(user)
         .build();
     recordService.save(rec);
 
-    // 10) Devolve o nome para download
+    // 10) retorna o nome do arquivo para download
     return outName;
   }
 
-  // ========= EXTRAÇÃO DE TEXTO (DOCX/PPTX 100% JDK; PDF/TXT simples) ========
+  // ========================= EXTRAÇÃO DE TEXTO ===============================
 
   private String extractText(Path path, String originalName, String contentType) {
     String name = originalName == null ? "" : originalName.toLowerCase();
@@ -106,8 +106,7 @@ public class TranslationServiceImpl implements TranslationService {
         return extractTextPptxViaZip(path);
       }
       if (name.endsWith(".pdf") || ct.contains("application/pdf") || isPdf(path)) {
-        // Pode trocar por PDFBox se quiser texto real; para isolar o erro, deixo vazio
-        return "";
+        return extractTextPdf(path);
       }
       if (name.endsWith(".txt") || ct.startsWith("text/")) {
         return Files.readString(path);
@@ -118,23 +117,23 @@ public class TranslationServiceImpl implements TranslationService {
     }
   }
 
-  /** DOCX: lê /word/document.xml e remove tags XML (sem POI). */
+  /** DOCX: lê /word/document.xml e preserva parágrafos e bullets. */
   private String extractTextDocxViaZip(Path path) throws java.io.IOException {
-    StringBuilder sb = new StringBuilder(4096);
+    String xml = null;
     try (var zis = new java.util.zip.ZipInputStream(Files.newInputStream(path))) {
       java.util.zip.ZipEntry e;
       while ((e = zis.getNextEntry()) != null) {
         if ("word/document.xml".equalsIgnoreCase(e.getName())) {
-          String xml = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
-          sb.append(xmlToPlain(xml));
+          xml = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
           break;
         }
       }
     }
-    return sb.toString();
+    if (xml == null) return "";
+    return docxXmlToPlain(xml);
   }
 
-  /** PPTX: lê /ppt/slides/slideN.xml em ordem e concatena texto (sem POI). */
+  /** PPTX: lê /ppt/slides/slideN.xml em ordem e concatena texto. */
   private String extractTextPptxViaZip(Path path) throws java.io.IOException {
     java.util.Map<Integer,String> slides = new java.util.TreeMap<>();
     try (var zis = new java.util.zip.ZipInputStream(Files.newInputStream(path))) {
@@ -143,7 +142,7 @@ public class TranslationServiceImpl implements TranslationService {
         String name = e.getName();
         if (name.startsWith("ppt/slides/slide") && name.endsWith(".xml")) {
           String xml = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
-          slides.put(parseSlideNumber(name), xmlToPlain(xml));
+          slides.put(parseSlideNumber(name), pptxXmlToPlain(xml));
         }
       }
     }
@@ -154,45 +153,134 @@ public class TranslationServiceImpl implements TranslationService {
     return sb.toString();
   }
 
-  private int parseSlideNumber(String name) {
-    // "ppt/slides/slide12.xml" -> 12
-    try {
-      String base = name.substring(name.lastIndexOf('/') + 1); // slide12.xml
-      String num  = base.substring(5, base.length() - 4);
-      return Integer.parseInt(num);
-    } catch (Exception ignore) {
-      return Integer.MAX_VALUE;
+  /** PDF: usa PDFBox para extrair texto (com ordenação). */
+  private String extractTextPdf(Path path) throws java.io.IOException {
+    try (var is = Files.newInputStream(path);
+         var doc = org.apache.pdfbox.pdmodel.PDDocument.load(is)) {
+      var stripper = new org.apache.pdfbox.text.PDFTextStripper();
+      stripper.setSortByPosition(true);
+      stripper.setStartPage(1);
+      stripper.setEndPage(Integer.MAX_VALUE);
+      String text = stripper.getText(doc);
+      if (text == null) return "";
+      return text
+          .replace('\u00A0', ' ')
+          .replace('\uF0B7', '\u2022');
     }
   }
 
-  /** Remove tags e desescapa entidades XML básicas. */
-  private String xmlToPlain(String xml) {
+  // ---- Conversores de XML -> texto -----------------------------------------
+
+  /** Converte o XML de word/document.xml em texto plano, preservando parágrafos e bullets. */
+  private String docxXmlToPlain(String xml) {
     if (xml == null || xml.isBlank()) return "";
-    String s = xml.replaceAll("(?s)<[^>]+>", " "); // remove tags
-    s = s.replace("&amp;", "&")
-         .replace("&lt;", "<")
-         .replace("&gt;", ">")
-         .replace("&quot;", "\"")
-         .replace("&apos;", "'");
-    return s.replaceAll("[ \\t\\x0B\\f\\r]+", " ")
-            .replaceAll(" *\\n *", "\n")
-            .trim();
+
+    xml = xml.replace("&amp;", "&")
+             .replace("&lt;", "<")
+             .replace("&gt;", ">")
+             .replace("&quot;", "\"")
+             .replace("&apos;", "'");
+
+    StringBuilder out = new StringBuilder(4096);
+
+    java.util.regex.Pattern P_PARA =
+        java.util.regex.Pattern.compile("<w:p[^>]*>(.+?)</w:p>", java.util.regex.Pattern.DOTALL);
+    java.util.regex.Matcher mPara = P_PARA.matcher(xml);
+
+    java.util.regex.Pattern P_TEXT =
+        java.util.regex.Pattern.compile("<w:t[^>]*>(.*?)</w:t>", java.util.regex.Pattern.DOTALL);
+
+    while (mPara.find()) {
+      String pXml = mPara.group(1);
+      boolean isBullet = pXml.contains("<w:numPr");
+
+      pXml = pXml.replaceAll("<w:br\\s*/>", "\n")
+                 .replaceAll("<w:tab\\s*/>", "\t");
+
+      StringBuilder pText = new StringBuilder();
+      java.util.regex.Matcher mTxt = P_TEXT.matcher(pXml);
+      while (mTxt.find()) {
+        String t = mTxt.group(1).replaceAll("<[^>]+>", "");
+        pText.append(t);
+      }
+
+      String para = pText.toString()
+          .replace('\u00A0', ' ')
+          .replace('\uF0B7', '\u2022')
+          .replaceAll("[ \\t\\x0B\\f\\r]+", " ")
+          .trim();
+
+      if (!para.isEmpty()) {
+        if (isBullet) out.append("• ").append(para);
+        else out.append(para);
+        out.append("\n\n");
+      }
+    }
+
+    return out.toString().trim();
   }
+
+  /** Converte o XML de um slide (ppt/slides/slideN.xml) em texto, preservando bullets. */
+  private String pptxXmlToPlain(String xml) {
+    if (xml == null || xml.isBlank()) return "";
+
+    xml = xml.replace("&amp;", "&")
+             .replace("&lt;", "<")
+             .replace("&gt;", ">")
+             .replace("&quot;", "\"")
+             .replace("&apos;", "'");
+
+    StringBuilder out = new StringBuilder(2048);
+
+    java.util.regex.Pattern P_PARA =
+        java.util.regex.Pattern.compile("<a:p[^>]*>(.+?)</a:p>", java.util.regex.Pattern.DOTALL);
+    java.util.regex.Matcher mPara = P_PARA.matcher(xml);
+
+    java.util.regex.Pattern P_TEXT =
+        java.util.regex.Pattern.compile("<a:t[^>]*>(.*?)</a:t>", java.util.regex.Pattern.DOTALL);
+
+    while (mPara.find()) {
+      String pXml = mPara.group(1);
+      boolean isBullet = pXml.contains("<a:bu") || pXml.contains("buAutoNum") || pXml.contains("buChar");
+
+      pXml = pXml.replaceAll("<a:br\\s*/>", "\n")
+                 .replaceAll("<a:tab\\s*/>", "\t");
+
+      StringBuilder pText = new StringBuilder();
+      java.util.regex.Matcher mTxt = P_TEXT.matcher(pXml);
+      while (mTxt.find()) {
+        String t = mTxt.group(1).replaceAll("<[^>]+>", "");
+        pText.append(t);
+      }
+
+      String para = pText.toString()
+          .replace('\u00A0', ' ')
+          .replace('\uF0B7', '\u2022')
+          .replaceAll("[ \\t\\x0B\\f\\r]+", " ")
+          .trim();
+
+      if (!para.isEmpty()) {
+        if (isBullet) out.append("• ").append(para);
+        else out.append(para);
+        out.append("\n");
+      }
+    }
+
+    return out.toString().trim();
+  }
+
+  // ========================= UTILITÁRIOS =====================================
 
   private boolean isPdf(Path path) {
     try (var is = Files.newInputStream(path)) {
       byte[] header = is.readNBytes(5);
-      return header.length >= 5 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F' && header[4] == '-';
+      return header.length >= 5 && header[0] == '%' && header[1] == 'P'
+          && header[2] == 'D' && header[3] == 'F' && header[4] == '-';
     } catch (Exception ignored) { return false; }
   }
 
-  private boolean isOOXMLDocx(Path path) {
-    return zipHasEntry(path, "word/document.xml");
-  }
-
-  private boolean isOOXMLPptx(Path path) {
-    return zipHasEntry(path, "ppt/presentation.xml");
-  }
+  private boolean isOOXMLDocx(Path path) { return zipHasEntry(path, "word/document.xml"); }
+  private boolean isOOXMLPptx(Path path) { return zipHasEntry(path, "ppt/presentation.xml"); }
 
   private boolean zipHasEntry(Path path, String entry) {
     try (var zis = new java.util.zip.ZipInputStream(Files.newInputStream(path))) {
@@ -203,8 +291,6 @@ public class TranslationServiceImpl implements TranslationService {
     } catch (Exception ignored) {}
     return false;
   }
-
-  // ========= HELPERS DE NOME/EXTENSÃO =======================================
 
   private String getExtensionSafe(String name) {
     if (name == null || name.isBlank()) return null;
@@ -246,5 +332,15 @@ public class TranslationServiceImpl implements TranslationService {
     if (n.endsWith(".pptx")) return "PPTX";
     if (n.endsWith(".txt"))  return "TXT";
     return "FILE";
+  }
+
+  private int parseSlideNumber(String name) {
+    try {
+      String base = name.substring(name.lastIndexOf('/') + 1); // slide12.xml
+      String num  = base.substring(5, base.length() - 4);
+      return Integer.parseInt(num);
+    } catch (Exception ignore) {
+      return Integer.MAX_VALUE;
+    }
   }
 }
