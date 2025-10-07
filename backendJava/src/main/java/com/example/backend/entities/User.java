@@ -2,6 +2,8 @@ package com.example.backend.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -23,19 +25,19 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(length = 50, nullable = false)
-    private String role;   // "admin" ou "user"
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false)
+    private RoleName role;   // USER ou ADMIN
 
     public User() {}
 
-    public User(String username, String password, String email, String role) {
+    public User(String username, String password, String email, RoleName role) {
         this.username = username;
         this.password = password;
         this.email = email;
         this.role = role;
     }
 
-    // getters e setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -48,6 +50,6 @@ public class User {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    public RoleName getRole() { return role; }
+    public void setRole(RoleName role) { this.role = role; }
 }

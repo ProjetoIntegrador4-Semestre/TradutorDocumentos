@@ -15,6 +15,8 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.example.backend.entities.RoleName;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +26,6 @@ import jakarta.servlet.http.HttpServletResponse;
 public class AuthTokenFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthTokenFilter.class);
-
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final JwtUtils jwtUtils;
@@ -33,37 +34,28 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         this.jwtUtils = jwtUtils;
     }
 
-    // Padrões de caminhos públicos (aceita prefixos e curingas)
-    // Obs.: usar padrões evita esquecer subpaths (ex.: /swagger-ui/**, /files/** etc.)
+    // caminhos públicos
     private static final String[] PUBLIC_PATTERNS = {
-            "/",                    // home
-            "/error",               // erro padrão do Spring
-            "/files/**",            // arquivos públicos
-            "/api/auth/**",         // login/refresh
-            "/api/auth/google/**",  // OAuth flow
-            "/h2-console/**",
-            "/v3/api-docs/**",
-            "/swagger-ui.html",
-            "/swagger-ui/**",
-            "/swagger-resources/**",
-            "/swagger-config/**"
+        "/",
+        "/error",   
+        "/files/**",
+        "/api/auth/**",
+        "/api/auth/google/**",
+        "/auth/password/**",
+        "/h2-console/**",
+        "/v3/api-docs/**",
+        "/swagger-ui.html",
+        "/swagger-ui/**",
+        "/swagger-resources/**",
+        "/swagger-config/**"
     };
 
-    /**
-     * Diz ao Spring quando **não** filtrar:
-     * - Preflight CORS (OPTIONS)
-     * - Rotas públicas
-     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        final String method = request.getMethod();
-        if ("OPTIONS".equalsIgnoreCase(method)) return true;
-
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
         final String path = getPath(request);
         for (String pattern : PUBLIC_PATTERNS) {
-            if (PATH_MATCHER.match(pattern, path)) {
-                return true;
-            }
+            if (PATH_MATCHER.match(pattern, path)) return true;
         }
         return false;
     }
@@ -74,41 +66,38 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            // Se já há autenticação estabelecida, apenas segue
             if (SecurityContextHolder.getContext().getAuthentication() != null) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            // Lê o token (se houver)
             String jwt = parseJwt(request);
             if (!StringUtils.hasText(jwt)) {
-                // Sem token -> não autentica aqui; Security decidirá mais adiante
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            // Valida o token; jamais enviar 401 no filtro (deixe o Security/Controller responder)
             if (jwtUtils.validateJwtToken(jwt)) {
                 Long   id       = jwtUtils.getUserIdFromJwtToken(jwt);
-                String username = jwtUtils.getUserNameFromJwtToken(jwt);
+                String username = jwtUtils.getUserNameFromJwtToken(jwt); // pode ser null/unused
                 String email    = jwtUtils.getEmailFromJwtToken(jwt);
-                String role     = normalizeRole(jwtUtils.getRoleFromJwtToken(jwt)); // garante ROLE_*
+                String roleStr  = jwtUtils.getRoleFromJwtToken(jwt);     // "USER" ou "ROLE_USER" etc.
 
-                var authorities = List.of(new SimpleGrantedAuthority(role));
-                var userDetails = new UserDetailsImpl(id, username, email, null, role);
+                // normaliza para enum
+                RoleName roleEnum = toRoleEnum(roleStr);
+
+                var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + roleEnum.name()));
+                var userDetails = new UserDetailsImpl(id, username, email, null, roleEnum);
 
                 var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                logger.debug("✅ Auth configurada para {} ({} / {}) role={}",
-                        getPath(request), username, email, role);
+                logger.debug("✅ Auth configurada para {} (email={}) role={}", getPath(request), email, roleEnum.name());
             } else {
                 logger.warn("❌ Token inválido/expirado em {}", getPath(request));
             }
         } catch (Exception e) {
-            // Nunca interromper o fluxo com 401/500 aqui; deixe seguir.
             logger.error("⚠️ Erro ao processar JWT em {}: {}", getPath(request), e.toString());
         }
 
@@ -123,14 +112,20 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private String normalizeRole(String role) {
-        if (!StringUtils.hasText(role)) return "ROLE_USER";
-        return role.startsWith("ROLE_") ? role : "ROLE_" + role;
+    /** Aceita "USER", "ADMIN", "ROLE_USER", "ROLE_ADMIN". Default: USER */
+    private RoleName toRoleEnum(String roleClaim) {
+        if (!StringUtils.hasText(roleClaim)) return RoleName.USER;
+        String r = roleClaim.trim().toUpperCase();
+        if (r.startsWith("ROLE_")) r = r.substring(5);
+        try {
+            return RoleName.valueOf(r);
+        } catch (IllegalArgumentException ex) {
+            return RoleName.USER;
+        }
     }
 
     private String getPath(HttpServletRequest request) {
-        // servletPath ignora contextPath; se vazio, caia para requestURI
         String p = request.getServletPath();
         return (StringUtils.hasText(p) ? p : request.getRequestURI());
-    }
+        }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus; // <--- ADD ESTE import
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -14,7 +15,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+// REMOVA: import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -34,8 +37,8 @@ public class WebSecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(); // warning OK
+        authProvider.setUserDetailsService(userDetailsService); // warning OK
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
@@ -46,9 +49,7 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -62,7 +63,6 @@ public class WebSecurityConfig {
         return source;
     }
 
-
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, AuthTokenFilter authTokenFilter) throws Exception {
         http
@@ -73,37 +73,44 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // ✅ Endpoints abertos
+                .requestMatchers("/auth/password/forgot").permitAll()
+                .requestMatchers("/auth/password/reset").permitAll()
+                .requestMatchers("/auth/password/reset/validate").permitAll()
+
+                // ✅ rotas públicas (sem AntPathRequestMatcher)
+                .requestMatchers("/auth/password/**").permitAll()
                 .requestMatchers(
                     "/",
                     "/files/**",
                     "/api/auth/**",
-                    "/api/auth/google/**",   // 🔑 fluxo do Google OAuth
+                    "/api/auth/google/**",
                     "/h2-console/**",
                     "/swagger-ui.html", "/swagger-ui/**",
                     "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml",
                     "/swagger-resources", "/swagger-resources/**"
                 ).permitAll()
 
-                // ✅ Proteção por role
+                // ✅ proteção por role
                 .requestMatchers("/api/test/admin").hasRole("ADMIN")
                 .requestMatchers("/api/test/user").hasRole("USER")
                 .requestMatchers("/api/test/all").authenticated()
 
-                // ✅ Proteção de records e traduções
+                // ✅ proteção de records e traduções
                 .requestMatchers(HttpMethod.POST, "/translate-file").authenticated()
                 .requestMatchers("/records/**").authenticated()
 
-                // qualquer outro endpoint precisa estar logado
                 .anyRequest().authenticated()
             )
-            // 🔑 habilita OAuth2 Login (Google) + handler customizado
+            // ⛔️ devolve 401 ao invés de redirecionar pro Google em APIs
+            .exceptionHandling(e -> e
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+            )
+            // 🔑 OAuth2 login segue ativo (para /oauth2/authorization/google)
             .oauth2Login(oauth -> oauth
-                .successHandler(oAuth2LoginSuccessHandler) // gera token e salva usuário
+                .successHandler(oAuth2LoginSuccessHandler)
             );
 
         http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 }
