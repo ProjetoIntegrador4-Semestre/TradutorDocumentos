@@ -169,7 +169,7 @@ O sistema será desenvolvido do zero, com backend, frontend web e aplicação mo
 ---
 
 Integrantes do Grupo
-- Bruno Sakamoto 
+- Bruno A Sakamoto 
 - Júlio Figueiredo 
 - Luiz Medeiros
 - Rafael Sinkevicius
