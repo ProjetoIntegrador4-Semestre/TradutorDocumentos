@@ -5,8 +5,10 @@ import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.backend.dto.auth.ForgotPasswordRequest;
 import com.example.backend.dto.auth.ResetPasswordRequest;
@@ -75,7 +77,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     String tokenHash = Tokens.sha256Hex(req.token());
     PasswordResetToken token = tokenRepo
         .findByTokenHashAndUsedFalseAndExpiresAtAfter(tokenHash, Instant.now())
-        .orElseThrow(() -> new IllegalArgumentException("Token inválido ou expirado"));
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token inválido ou expirado"));
+
 
     User user = token.getUser();
 
@@ -90,4 +93,5 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     // (opcional) invalida outros tokens antigos do usuário
     tokenRepo.deleteByUserAndExpiresAtBefore(user, Instant.now());
   }
+  
 }

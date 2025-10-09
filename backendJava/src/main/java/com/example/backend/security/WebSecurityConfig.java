@@ -17,7 +17,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-// REMOVA: import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -75,6 +74,7 @@ public class WebSecurityConfig {
 
                 .requestMatchers("/auth/password/forgot").permitAll()
                 .requestMatchers("/auth/password/reset").permitAll()
+                .requestMatchers("/error").permitAll()  
                 .requestMatchers("/auth/password/reset/validate").permitAll()
 
                 // ✅ rotas públicas (sem AntPathRequestMatcher)
