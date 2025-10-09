@@ -1,15 +1,16 @@
+``` mermaid
 erDiagram
   USERS {
     bigint id PK
     varchar username UK
     varchar email UK
     varchar password
-    enum role        // USER | ADMIN
+    enum role       
   }
 
   TRANSLATION_RECORDS {
     bigint id PK
-    bigint user_id FK   // opcional (nullable)
+    bigint user_id FK   
     varchar original_filename
     varchar file_type
     varchar detected_lang
@@ -21,16 +22,13 @@ erDiagram
 
   PASSWORD_RESET_TOKENS {
     bigint id PK
-    bigint user_id FK        // obrigatório (NOT NULL)
-    char(64) token_hash UK   // SHA-256 em hex
+    bigint user_id FK           
+    char(64) token_hash UK     
     timestamptz expires_at
     boolean used
     timestamptz created_at
   }
 
-  %% Relacionamentos
-  %% Um usuário pode ter 0..N traduções (user_id é opcional em TRANSLATION_RECORDS)
-  USERS ||--o{ TRANSLATION_RECORDS : "owns (optional)"
-
-  %% Um usuário pode ter 0..N tokens de reset (user_id é obrigatório em PASSWORD_RESET_TOKENS)
-  USERS ||--o{ PASSWORD_RESET_TOKENS : "password reset"
+  USERS ||--o{ TRANSLATION_RECORDS : ""
+  USERS ||--o{ PASSWORD_RESET_TOKENS : ""
+```
