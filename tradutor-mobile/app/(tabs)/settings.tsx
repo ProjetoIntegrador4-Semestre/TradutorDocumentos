@@ -58,7 +58,8 @@ export default function Settings() {
         </View>
 
         <TouchableOpacity
-          onPress={async () => { await signOut(); router.replace("/(auth)/login"); }}
+          onPress={async () => { await signOut(); router.replace("/login");
+ }}
           style={{ backgroundColor: "#d82626", borderRadius: 8, paddingVertical: 14, alignItems: "center" }}
         >
           <Text style={{ color: "#fff", fontWeight: "700" }}>{t("settings.logout")}</Text>

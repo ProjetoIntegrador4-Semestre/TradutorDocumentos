@@ -14,38 +14,37 @@ export default function Forgot() {
       return;
     }
     Alert.alert(
-      "Esqueci minha senha",
-      `Enviamos um link de redefinição para: ${email}`
+      "Pronto",
+      "Se esse e-mail existir, você receberá um link para redefinir a senha."
     );
-    router.replace("/(auth)/login");
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.bg, padding: 16 }}>
-      <Text style={{ fontSize: 20, fontWeight: "700", color: theme.colors.text, marginBottom: 8 }}>
+    <View style={{ flex: 1, padding: 16, backgroundColor: theme.colors.bg }}>
+      <Text style={{ fontSize: 22, fontWeight: "800", color: theme.colors.text, marginBottom: 12 }}>
         Esqueci minha senha
       </Text>
 
-      <Text style={{ color: theme.colors.muted, marginBottom: 16 }}>
-        Digite seu e-mail para enviarmos um link de redefinição.
+      <Text style={{ color: theme.colors.muted, marginBottom: 12 }}>
+        Digite seu e-mail e enviaremos um link para redefinir sua senha.
       </Text>
 
       <Text style={{ color: theme.colors.text, marginBottom: 6 }}>E-mail</Text>
       <TextInput
         value={email}
         onChangeText={setEmail}
-        placeholder="email@exemplo.com"
-        placeholderTextColor={theme.colors.muted}
         keyboardType="email-address"
         autoCapitalize="none"
+        autoCorrect={false}
         style={{
           borderWidth: 1,
           borderColor: theme.colors.border,
-          borderRadius: 10,
-          padding: 12,
-          color: theme.colors.text,
+          borderRadius: 6,
+          padding: 10,
           backgroundColor: theme.colors.surface,
+          color: theme.colors.text,
         }}
+        placeholder="email@exemplo.com"
       />
 
       <TouchableOpacity
@@ -53,7 +52,7 @@ export default function Forgot() {
         style={{
           marginTop: 16,
           backgroundColor: theme.colors.primary,
-          borderRadius: 10,
+          borderRadius: 8,
           paddingVertical: 14,
           alignItems: "center",
         }}
@@ -64,7 +63,7 @@ export default function Forgot() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => router.replace("/(auth)/login")}
+        onPress={() => router.replace("/login")}
         style={{ marginTop: 12, alignItems: "center" }}
       >
         <Text style={{ color: theme.colors.text }}>Voltar ao login</Text>

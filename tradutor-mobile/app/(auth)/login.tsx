@@ -1,4 +1,3 @@
-// app/(auth)/login.tsx
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { Link, useRouter } from "expo-router";
@@ -7,7 +6,7 @@ import GoogleButton from "../../components/GoogleButton";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -20,7 +19,7 @@ export default function Login() {
       }
       setSubmitting(true);
       await signIn(email.trim().toLowerCase(), pwd);
-      router.replace("/(tabs)/translator");
+      router.replace("/translator"); // sem (tabs)
     } catch (e: any) {
       Alert.alert("Erro", e?.message ?? "Falha no login");
     } finally {
@@ -32,15 +31,16 @@ export default function Login() {
     <View style={{ flex: 1, padding: 16, backgroundColor: "#f2f2f2" }}>
       <View style={{ flexDirection: "row", justifyContent: "center", columnGap: 20, marginBottom: 16 }}>
         <Text style={{ color: "#2b64ff", fontWeight: "700" }}>Login</Text>
-        <Link href="/(auth)/register" asChild>
-          <TouchableOpacity>
-            <Text style={{ color: "#2b64ff" }}>Cadastre-se</Text>
-          </TouchableOpacity>
+
+        {/* trocamos Link asChild por Link simples para evitar SlotClone */}
+        <Link href="/register" style={{ color: "#2b64ff" }}>
+          Cadastre-se
         </Link>
       </View>
 
       <Text style={{ color: "#555", marginBottom: 16 }}>
-        Faça login para traduzir seus documentos de forma rápida e segura. Com sua conta, você acompanha o progresso das traduções e tem acesso ao histórico.
+        Faça login para traduzir seus documentos de forma rápida e segura. Com sua conta, você
+        acompanha o progresso das traduções e tem acesso ao histórico.
       </Text>
 
       <Input
@@ -61,7 +61,7 @@ export default function Login() {
       />
 
       <View style={{ alignItems: "flex-end", marginTop: 6 }}>
-        <TouchableOpacity onPress={() => router.push("/(auth)/forgot")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => router.push("/forgot")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={{ color: "#2b64ff", fontWeight: "600" }}>Esqueci minha senha</Text>
         </TouchableOpacity>
       </View>
@@ -70,13 +70,7 @@ export default function Login() {
         <TouchableOpacity
           onPress={onLogin}
           disabled={submitting}
-          style={{
-            backgroundColor: "#2b4bff",
-            borderRadius: 8,
-            paddingVertical: 14,
-            alignItems: "center",
-            opacity: submitting ? 0.7 : 1,
-          }}
+          style={{ backgroundColor: "#2b4bff", borderRadius: 8, paddingVertical: 14, alignItems: "center", opacity: submitting ? 0.7 : 1 }}
         >
           <Text style={{ color: "#fff", fontWeight: "700", letterSpacing: 2 }}>
             {submitting ? "Entrando..." : "LOGIN"}
@@ -90,16 +84,7 @@ export default function Login() {
         <View style={{ flex: 1, height: 1, backgroundColor: "#cfcfcf" }} />
       </View>
 
-      <GoogleButton
-        title="LOGIN COM GOOGLE"
-        onPress={async () => {
-          try {
-            await signInWithGoogle();
-          } catch (e: any) {
-            Alert.alert("Google", e?.message ?? "Falha no login com Google");
-          }
-        }}
-      />
+      <GoogleButton onPress={() => Alert.alert("Google", "Integração Google será ativada depois")} />
     </View>
   );
 }
