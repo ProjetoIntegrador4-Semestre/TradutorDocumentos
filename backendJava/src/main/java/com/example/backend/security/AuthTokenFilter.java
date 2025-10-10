@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -34,13 +35,18 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         this.jwtUtils = jwtUtils;
     }
 
-    // caminhos públicos
+    // ⚠️ BOOT TOKEN (apenas para /api/auth/signin)
+    @Value("${APP_BOOT_TOKEN:}")
+    private String appBootToken;
+
+    // caminhos públicos — *NÃO* inclua /api/auth/signin aqui!
     private static final String[] PUBLIC_PATTERNS = {
         "/",
-        "/error",   
+        "/error",
         "/files/**",
-        "/api/auth/**",
+        "/api/auth/signup",       // cadastro livre
         "/api/auth/google/**",
+        "/oauth2/*", "/login/oauth2/*",
         "/auth/password/**",
         "/h2-console/**",
         "/v3/api-docs/**",
@@ -52,11 +58,13 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        // Preflight CORS nunca filtra
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
         final String path = getPath(request);
         for (String pattern : PUBLIC_PATTERNS) {
             if (PATH_MATCHER.match(pattern, path)) return true;
         }
+        // /api/auth/signin NÃO é público -> precisa filtrar aqui
         return false;
     }
 
@@ -65,25 +73,52 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
+        final String path = getPath(request);
+
         try {
+            // Se já existe auth no contexto, segue o fluxo
             if (SecurityContextHolder.getContext().getAuthentication() != null) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            String jwt = parseJwt(request);
+            // -------------------------
+            // 1) /api/auth/signin → exige BOOT_TOKEN
+            // -------------------------
+            if (PATH_MATCHER.match("/api/auth/signin", path)) {
+                String boot = parseBearer(request);
+                if (!StringUtils.hasText(appBootToken) || !StringUtils.hasText(boot) || !boot.equals(appBootToken)) {
+                    logger.warn("❌ BOOT_TOKEN ausente/ inválido em {}", path);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+
+                // Autenticação técnica (ROLE_BOOT) apenas para destravar o endpoint de login
+                var auth = new UsernamePasswordAuthenticationToken(
+                        "boot@app", null, List.of(new SimpleGrantedAuthority("ROLE_BOOT")));
+                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // -------------------------
+            // 2) Demais rotas protegidas → validar JWT do usuário (fluxo normal)
+            // -------------------------
+            String jwt = parseBearer(request);
             if (!StringUtils.hasText(jwt)) {
+                // sem Authorization -> SecurityEntryPoint (401) cuidará adiante
                 filterChain.doFilter(request, response);
                 return;
             }
 
             if (jwtUtils.validateJwtToken(jwt)) {
                 Long   id       = jwtUtils.getUserIdFromJwtToken(jwt);
-                String username = jwtUtils.getUserNameFromJwtToken(jwt); // pode ser null/unused
+                String username = jwtUtils.getUserNameFromJwtToken(jwt); // pode ser null
                 String email    = jwtUtils.getEmailFromJwtToken(jwt);
-                String roleStr  = jwtUtils.getRoleFromJwtToken(jwt);     // "USER" ou "ROLE_USER" etc.
+                String roleStr  = jwtUtils.getRoleFromJwtToken(jwt);     // "USER" / "ROLE_USER"
 
-                // normaliza para enum
                 RoleName roleEnum = toRoleEnum(roleStr);
 
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + roleEnum.name()));
@@ -91,23 +126,24 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
                 var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                logger.debug("✅ Auth configurada para {} (email={}) role={}", getPath(request), email, roleEnum.name());
+
+                logger.debug("✅ JWT ok em {} (email={}) role={}", path, email, roleEnum.name());
             } else {
-                logger.warn("❌ Token inválido/expirado em {}", getPath(request));
+                logger.warn("❌ JWT inválido/expirado em {}", path);
             }
+
         } catch (Exception e) {
-            logger.error("⚠️ Erro ao processar JWT em {}: {}", getPath(request), e.toString());
+            logger.error("⚠️ Erro ao processar token em {}: {}", path, e.toString());
         }
 
         filterChain.doFilter(request, response);
     }
 
-    private String parseJwt(HttpServletRequest request) {
+    private String parseBearer(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
-            return headerAuth.substring(7);
+            return headerAuth.substring(7).trim();
         }
         return null;
     }
@@ -127,5 +163,5 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     private String getPath(HttpServletRequest request) {
         String p = request.getServletPath();
         return (StringUtils.hasText(p) ? p : request.getRequestURI());
-        }
+    }
 }

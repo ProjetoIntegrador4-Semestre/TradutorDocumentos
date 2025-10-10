@@ -45,6 +45,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      APP_BOOT_TOKEN: public-dev-boot-token-CHANGE_ME
       LIBRE_BASE_URL: http://libretranslate:5000
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/translator
       SPRING_DATASOURCE_USERNAME: app
