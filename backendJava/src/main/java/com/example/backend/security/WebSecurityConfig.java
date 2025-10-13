@@ -30,7 +30,7 @@ public class WebSecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     public WebSecurityConfig(UserDetailsServiceImpl userDetailsService,
-     OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) {
+                             OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) {
         this.userDetailsService = userDetailsService;
         this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
     }
@@ -88,6 +88,7 @@ public class WebSecurityConfig {
                     "/",
                     "/files/**",
                     "/api/auth/signup",          // cadastro SEM token
+                    "/api/auth/signin",          // <<< LOGIN SEM TOKEN (alterado)
                     "/api/auth/google/**",       // fluxo google
                     "/oauth2/*", "/login/oauth2/*",
                     "/h2-console/**",
@@ -96,10 +97,7 @@ public class WebSecurityConfig {
                     "/swagger-resources", "/swagger-resources/**"
                 ).permitAll()
 
-                // ----- LOGIN EXIGE TOKEN (BOOT_TOKEN via filtro) -----
-                .requestMatchers("/api/auth/signin").authenticated()
-
-                // ----- OUTRAS REGRAS / EXEMPLOS -----
+                // ----- OUTRAS REGRAS / EXEMPLOS (protegidas) -----
                 .requestMatchers("/api/test/admin").hasRole("ADMIN")
                 .requestMatchers("/api/test/user").hasRole("USER")
                 .requestMatchers("/api/test/all").authenticated()
@@ -115,7 +113,7 @@ public class WebSecurityConfig {
             // OAuth2 login (se usar Google pelo /oauth2/authorization/google)
             .oauth2Login(oauth -> oauth.successHandler(oAuth2LoginSuccessHandler));
 
-        // nosso filtro de tokens (vai aceitar BOOT_TOKEN em /api/auth/signin)
+        // filtro de tokens (JWT para rotas protegidas)
         http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

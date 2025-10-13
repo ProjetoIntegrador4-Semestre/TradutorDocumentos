@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -35,16 +34,13 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         this.jwtUtils = jwtUtils;
     }
 
-    // ⚠️ BOOT TOKEN (apenas para /api/auth/signin)
-    @Value("${APP_BOOT_TOKEN:}")
-    private String appBootToken;
-
-    // caminhos públicos — *NÃO* inclua /api/auth/signin aqui!
+    // ✅ caminhos públicos (agora incluindo signin e signup)
     private static final String[] PUBLIC_PATTERNS = {
         "/",
         "/error",
         "/files/**",
-        "/api/auth/signup",       // cadastro livre
+        "/api/auth/signin",       // <- liberado
+        "/api/auth/signup",       // <- já era liberado
         "/api/auth/google/**",
         "/oauth2/*", "/login/oauth2/*",
         "/auth/password/**",
@@ -60,11 +56,13 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         // Preflight CORS nunca filtra
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
+
         final String path = getPath(request);
+
+        // Bypass total para tudo que é público
         for (String pattern : PUBLIC_PATTERNS) {
             if (PATH_MATCHER.match(pattern, path)) return true;
         }
-        // /api/auth/signin NÃO é público -> precisa filtrar aqui
         return false;
     }
 
@@ -82,33 +80,10 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // -------------------------
-            // 1) /api/auth/signin → exige BOOT_TOKEN
-            // -------------------------
-            if (PATH_MATCHER.match("/api/auth/signin", path)) {
-                String boot = parseBearer(request);
-                if (!StringUtils.hasText(appBootToken) || !StringUtils.hasText(boot) || !boot.equals(appBootToken)) {
-                    logger.warn("❌ BOOT_TOKEN ausente/ inválido em {}", path);
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    return;
-                }
-
-                // Autenticação técnica (ROLE_BOOT) apenas para destravar o endpoint de login
-                var auth = new UsernamePasswordAuthenticationToken(
-                        "boot@app", null, List.of(new SimpleGrantedAuthority("ROLE_BOOT")));
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
-
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            // -------------------------
-            // 2) Demais rotas protegidas → validar JWT do usuário (fluxo normal)
-            // -------------------------
+            // Para rotas protegidas: validar JWT do usuário (fluxo normal)
             String jwt = parseBearer(request);
             if (!StringUtils.hasText(jwt)) {
-                // sem Authorization -> SecurityEntryPoint (401) cuidará adiante
+                // sem Authorization -> SecurityEntryPoint (401) cuidará adiante, se a rota exigir auth
                 filterChain.doFilter(request, response);
                 return;
             }
