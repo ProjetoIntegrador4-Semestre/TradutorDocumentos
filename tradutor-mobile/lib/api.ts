@@ -1,22 +1,43 @@
 // lib/api.ts
-import { Platform } from "react-native";
+import { getAuth, clearAuth } from "./storage";
 
-const WEB = "http://localhost:8080";
-const ANDROID = "http://10.0.2.2:8080"; // emulador Android
-const IOS = "http://localhost:8080";    // iOS/Expo Go local
-
-export const BASE_URL =
-  Platform.OS === "web" ? WEB : Platform.OS === "android" ? ANDROID : IOS;
+export const BASE_URL = "http://localhost:8080";
 
 export class ApiError extends Error {
   status?: number;
-  data?: any;
-  constructor(message: string, status?: number, data?: any) {
+  details?: any;
+  constructor(message: string, status?: number, details?: any) {
     super(message);
     this.status = status;
-    this.data = data;
+    this.details = details;
   }
 }
 
-// 🔐 BOOT_TOKEN deve ser o MESMO do backend (APP_BOOT_TOKEN)
-export const BOOT_TOKEN = "public-dev-boot-token-CHANGE_ME";
+export async function apiFetch(path: string, init: RequestInit = {}) {
+  const { token } = (await getAuth()) ?? {};
+  const headers = new Headers(init.headers as any);
+
+  headers.set("Accept", "application/json");
+  if (!headers.has("Content-Type") && init.body && !(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+
+  // Se o token expirou/é inválido, o backend devolve 401:
+  if (res.status === 401) {
+    await clearAuth();
+    throw new ApiError("Sessão expirada. Entre novamente.", 401);
+  }
+
+  // Tenta decodificar JSON; se não tiver corpo, retorna null
+  const text = await res.text();
+  const data = text ? (() => { try { return JSON.parse(text); } catch { return text; } })() : null;
+
+  if (!res.ok) {
+    const msg = (data && (data.message || data.error)) || `Erro ${res.status}`;
+    throw new ApiError(msg, res.status, data);
+  }
+  return data;
+}

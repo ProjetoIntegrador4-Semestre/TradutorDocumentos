@@ -1,6 +1,6 @@
 // context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { BASE_URL, ApiError, BOOT_TOKEN } from "../lib/api";
+import { BASE_URL, ApiError } from "../lib/api";
 import { getAuth, saveAuth, clearAuth } from "../lib/storage";
 
 type User = { id?: string | number; name?: string; email: string; role?: string };
@@ -19,7 +19,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // restaura sessão
   useEffect(() => {
     (async () => {
       try {
@@ -32,19 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // -------- LOGIN (exige BOOT_TOKEN no header) --------
+  // --- LOGIN (sem token) ---
   async function signIn(email: string, password: string) {
     const userId = email.trim().toLowerCase();
     const payload = { email: userId, username: userId, password };
 
     const res = await fetch(`${BASE_URL}/api/auth/signin`, {
       method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        // ← BOOT_TOKEN só no login (Opção B)
-        Authorization: `Bearer ${BOOT_TOKEN}`,
-      },
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -52,9 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let data: any = null; try { data = text ? JSON.parse(text) : null; } catch {}
 
     if (!res.ok) {
-      if (res.status === 401) {
-        throw new ApiError("E-mail, senha ou token de login inválidos.", 401);
-      }
+      if (res.status === 401) throw new ApiError("E-mail ou senha incorretos.", 401);
       const msg = data?.message || data?.error || text || `Erro ${res.status}`;
       console.log("SIGNIN ERROR →", res.status, msg);
       throw new ApiError(msg, res.status, data ?? text);
@@ -74,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
   }
 
-  // -------- CADASTRO (sem token) --------
+  // --- CADASTRO (sem token) ---
   async function signUp(name: string, email: string, password: string) {
     const payload = { username: name, name, email, password, confirmPassword: password };
 
@@ -93,11 +85,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new ApiError(msg, res.status, data ?? text);
     }
 
-    // após cadastrar, já efetua o login
+    // Faz login após cadastrar
     await signIn(email, password);
   }
 
-  // -------- SAIR --------
   async function signOut() {
     await clearAuth();
     setUser(null);
