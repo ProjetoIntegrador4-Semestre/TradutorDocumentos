@@ -58,7 +58,8 @@ public class WebSecurityConfig {
         cfg.setAllowedOrigins(List.of(
             "http://localhost:8080",
             "http://localhost:3000",
-            "http://localhost:8081"
+            "http://localhost:8081",
+            "http://localhost:5173"
             // "http://localhost:19006", "http://127.0.0.1:19006" // Expo web, se precisar
         ));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));

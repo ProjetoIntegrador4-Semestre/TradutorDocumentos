@@ -38,3 +38,6 @@ application.properties
 *.iml
 
 settings.json
+
+.env
+node_modules
