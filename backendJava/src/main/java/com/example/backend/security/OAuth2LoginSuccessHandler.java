@@ -4,12 +4,12 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import com.example.backend.entities.User;
-import com.example.backend.entities.RoleName;
 import com.example.backend.repositories.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -34,44 +34,55 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
-        var principal = (DefaultOAuth2User) authentication.getPrincipal();
 
-        final String email = principal.getAttribute("email");
+        // Aceita OIDC ou OAuth2
+        Object principal = authentication.getPrincipal();
+        Map<String, Object> attrs;
+        if (principal instanceof OidcUser oidc) {
+            attrs = oidc.getAttributes();
+        } else if (principal instanceof OAuth2User oauth2) {
+            attrs = oauth2.getAttributes();
+        } else {
+            writeJson(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    Map.of("error", "Unsupported principal type"));
+            return;
+        }
 
-        String tmpName = principal.getAttribute("name");
+        final String email = (String) attrs.get("email");
+
+        String tmpName = (String) attrs.get("name");
         if (tmpName == null || tmpName.isBlank()) {
-            String given  = principal.getAttribute("given_name");
-            String family = principal.getAttribute("family_name");
+            String given  = (String) attrs.get("given_name");
+            String family = (String) attrs.get("family_name");
             tmpName = ((given != null ? given : "") + " " + (family != null ? family : "")).trim();
         }
-        if (tmpName == null || tmpName.isBlank()) {
-            tmpName = email; // fallback
-        }
-        final String displayName = tmpName; // <- final para usar no lambda
+        final String displayName = (tmpName == null || tmpName.isBlank()) ? email : tmpName;
 
-        // cria usuário se não existir
+        // cria usuário se não existir (role como String minúscula)
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             User u = new User();
             u.setEmail(email);
             u.setUsername(displayName);
-            u.setPassword("");           // sem senha local
-            u.setRole(RoleName.USER);    // enum
+            u.setPassword("");      // social sem senha local
+            u.setRole("user");      // padrão sem prefixo
             return userRepository.save(u);
         });
 
         // gera JWT
         String token = jwtUtils.generateJwtToken(UserDetailsImpl.build(user));
 
-        Map<String, Object> body = Map.of(
+        writeJson(response, HttpServletResponse.SC_OK, Map.of(
             "message", "Login com Google bem-sucedido",
             "name", user.getUsername(),
             "email", user.getEmail(),
-            "role", user.getRole().name(),
+            "role", user.getRole(),  // <- String: "user" | "admin"
             "token", token
-        );
+        ));
+    }
 
+    private void writeJson(HttpServletResponse response, int status, Map<String, Object> body) throws IOException {
         if (!response.isCommitted()) {
-            response.setStatus(HttpServletResponse.SC_OK);
+            response.setStatus(status);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(objectMapper.writeValueAsString(body));
         }

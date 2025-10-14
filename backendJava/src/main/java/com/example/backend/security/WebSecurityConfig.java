@@ -17,7 +17,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-// (não usar AntPathRequestMatcher)
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -60,8 +59,7 @@ public class WebSecurityConfig {
             "http://localhost:8080",
             "http://localhost:3000",
             "http://localhost:8081"
-            // se usar Expo web em 19006, adicione:
-            // "http://localhost:19006", "http://127.0.0.1:19006"
+            // "http://localhost:19006", "http://127.0.0.1:19006" // Expo web, se precisar
         ));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         cfg.setAllowedHeaders(List.of("*"));
@@ -77,43 +75,51 @@ public class WebSecurityConfig {
             .cors(c -> c.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .headers(h -> h.frameOptions(f -> f.disable()))
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // OAuth2 precisa de sessão no fluxo de autorização; IF_REQUIRED evita sessão no resto
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
-                // CORS preflight sempre liberado
+                // Preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // ----- ROTAS PÚBLICAS -----
+                // Rotas públicas
+                .requestMatchers("/error").permitAll() // evita loop/500 na página de erro
                 .requestMatchers("/auth/password/**").permitAll()
                 .requestMatchers(
                     "/",
                     "/files/**",
-                    "/api/auth/signup",          // cadastro SEM token
-                    "/api/auth/signin",          // <<< LOGIN SEM TOKEN (alterado)
-                    "/api/auth/google/**",       // fluxo google
-                    "/oauth2/*", "/login/oauth2/*",
+                    "/api/auth/signup",
+                    "/api/auth/signin",
+                    "/api/auth/google/**",
+                    "/oauth2/**",           // inicia login social
+                    "/login/oauth2/**",     // callback do provedor
                     "/h2-console/**",
                     "/swagger-ui.html", "/swagger-ui/**",
                     "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml",
                     "/swagger-resources", "/swagger-resources/**"
                 ).permitAll()
 
-                // ----- OUTRAS REGRAS / EXEMPLOS (protegidas) -----
-                .requestMatchers("/api/test/admin").hasRole("ADMIN")
-                .requestMatchers("/api/test/user").hasRole("USER")
+                // Exemplos protegidos
+                .requestMatchers("/api/test/admin").hasAuthority("admin")
+                .requestMatchers("/api/test/user").hasAuthority("user")
                 .requestMatchers("/api/test/all").authenticated()
 
                 .requestMatchers(HttpMethod.POST, "/translate-file").authenticated()
                 .requestMatchers("/records/**").authenticated()
 
-                // qualquer outra rota precisa estar autenticada
+                // Qualquer outra rota requer auth
                 .anyRequest().authenticated()
             )
-            // API: quando faltar/errar auth, responder 401 (sem redirect)
+            // API: 401 em vez de redirect
             .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-            // OAuth2 login (se usar Google pelo /oauth2/authorization/google)
-            .oauth2Login(oauth -> oauth.successHandler(oAuth2LoginSuccessHandler));
+            // OAuth2 login (Google)
+            .oauth2Login(oauth -> oauth
+                .defaultSuccessUrl("/api/auth/google/success", true) // chama seu controller JSON
+                .failureUrl("/oauth2/error")                         // se der ruim, vai pra /oauth2/error
+            )
+            // Provider de auth (credenciais locais)
+            .authenticationProvider(authenticationProvider(passwordEncoder()));
 
-        // filtro de tokens (JWT para rotas protegidas)
+        // Filtro de JWT antes do UsernamePasswordAuthenticationFilter
         http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -9,9 +9,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.example.backend.entities.RoleName;   // <- agora vamos usar
 import com.example.backend.entities.User;
 import com.example.backend.repositories.UserRepository;
 import com.example.backend.security.JwtUtils;
@@ -39,7 +41,7 @@ public class AuthController {
                 jwt,
                 userDetails.getId(),
                 userDetails.getEmail(),
-                userDetails.getRole() // "user" ou "admin" conforme seu UserDetailsImpl
+                userDetails.getRole() // "user" ou "admin"
         ));
     }
 
@@ -49,11 +51,6 @@ public class AuthController {
         r = (r == null ? "" : r.trim().toLowerCase());
         if (!r.equals("user") && !r.equals("admin")) r = "user";
         return r;
-    }
-
-    private RoleName toRoleEnum(String normalized) {
-        // mapeia "user"/"admin" -> RoleName.USER/ADMIN
-        return "admin".equals(normalized) ? RoleName.ADMIN : RoleName.USER;
     }
 
     @PostMapping("/signup")
@@ -71,7 +68,7 @@ public class AuthController {
         user.setEmail(signUpRequest.getEmail());
 
         String normalized = sanitizeRole(signUpRequest.getRole()); // "user" | "admin"
-        user.setRole(toRoleEnum(normalized));                      // <- enum aqui
+        user.setRole(normalized);                                  // <- agora é String
 
         userRepository.save(user);
         return ResponseEntity.ok("User registered successfully!");

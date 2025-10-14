@@ -4,13 +4,13 @@ import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.entities.User;
-import com.example.backend.entities.RoleName;
 import com.example.backend.repositories.UserRepository;
 import com.example.backend.security.JwtUtils;
 import com.example.backend.security.UserDetailsImpl;
@@ -29,25 +29,35 @@ public class GoogleAuthController {
 
     @GetMapping("/success")
     public ResponseEntity<?> success(Authentication authentication) {
-        var principal = (DefaultOAuth2User) authentication.getPrincipal();
+        String email;
+        String displayName;
 
-        final String email = principal.getAttribute("email");
+        Object p = authentication.getPrincipal();
+        Map<String, Object> attrs;
 
-        String tmpName = principal.getAttribute("name");
+        if (p instanceof OidcUser oidc) {
+            attrs = oidc.getAttributes();
+        } else if (p instanceof OAuth2User oauth2) {
+            attrs = oauth2.getAttributes();
+        } else {
+            return ResponseEntity.status(500).body(Map.of("error", "Unsupported principal type"));
+        }
+
+        email = (String) attrs.get("email");
+        String tmpName = (String) attrs.get("name");
         if (tmpName == null || tmpName.isBlank()) {
-            String given  = principal.getAttribute("given_name");
-            String family = principal.getAttribute("family_name");
+            String given  = (String) attrs.get("given_name");
+            String family = (String) attrs.get("family_name");
             tmpName = ((given != null ? given : "") + " " + (family != null ? family : "")).trim();
         }
-        if (tmpName == null || tmpName.isBlank()) tmpName = email;
-        final String displayName = tmpName;
+        displayName = (tmpName == null || tmpName.isBlank()) ? email : tmpName;
 
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             User novo = new User();
             novo.setUsername(displayName);
             novo.setEmail(email);
-            novo.setPassword("");        // social não usa senha local
-            novo.setRole(RoleName.USER); // <- enum aqui
+            novo.setPassword("");   // social sem senha local
+            novo.setRole("user");   // padrão sem prefixo
             return userRepository.save(novo);
         });
 
@@ -57,7 +67,7 @@ public class GoogleAuthController {
             "message", "Login com Google bem-sucedido",
             "name", user.getUsername(),
             "email", user.getEmail(),
-            "role", user.getRole().name(), // "USER" | "ADMIN"
+            "role", user.getRole(), // <- String ("user" | "admin")
             "token", token
         ));
     }

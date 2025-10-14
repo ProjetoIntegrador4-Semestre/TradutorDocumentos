@@ -15,8 +15,6 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.example.backend.entities.RoleName;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,7 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class AuthTokenFilter extends OncePerRequestFilter {
 
-    private static final Logger logger = LoggerFactory.getLogger(AuthTokenFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(AuthTokenFilter.class);
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final JwtUtils jwtUtils;
@@ -34,15 +32,15 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         this.jwtUtils = jwtUtils;
     }
 
-    // ✅ caminhos públicos (agora incluindo signin e signup)
+    // ✅ caminhos públicos
     private static final String[] PUBLIC_PATTERNS = {
         "/",
         "/error",
         "/files/**",
-        "/api/auth/signin",       // <- liberado
-        "/api/auth/signup",       // <- já era liberado
+        "/api/auth/signin",
+        "/api/auth/signup",
         "/api/auth/google/**",
-        "/oauth2/*", "/login/oauth2/*",
+        "/oauth2/**", "/login/oauth2/**",   // ** importante usar /** e não /*
         "/auth/password/**",
         "/h2-console/**",
         "/v3/api-docs/**",
@@ -58,8 +56,6 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
 
         final String path = getPath(request);
-
-        // Bypass total para tudo que é público
         for (String pattern : PUBLIC_PATTERNS) {
             if (PATH_MATCHER.match(pattern, path)) return true;
         }
@@ -80,36 +76,33 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // Para rotas protegidas: validar JWT do usuário (fluxo normal)
+            // Para rotas protegidas: validar JWT
             String jwt = parseBearer(request);
             if (!StringUtils.hasText(jwt)) {
-                // sem Authorization -> SecurityEntryPoint (401) cuidará adiante, se a rota exigir auth
                 filterChain.doFilter(request, response);
                 return;
             }
 
             if (jwtUtils.validateJwtToken(jwt)) {
                 Long   id       = jwtUtils.getUserIdFromJwtToken(jwt);
-                String username = jwtUtils.getUserNameFromJwtToken(jwt); // pode ser null
+                String username = jwtUtils.getUserNameFromJwtToken(jwt); // ok se vier null
                 String email    = jwtUtils.getEmailFromJwtToken(jwt);
-                String roleStr  = jwtUtils.getRoleFromJwtToken(jwt);     // "USER" / "ROLE_USER"
+                String roleStr  = normalizeRole(jwtUtils.getRoleFromJwtToken(jwt)); // "user" | "admin"
 
-                RoleName roleEnum = toRoleEnum(roleStr);
-
-                var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + roleEnum.name()));
-                var userDetails = new UserDetailsImpl(id, username, email, null, roleEnum);
+                var authorities = List.of(new SimpleGrantedAuthority(roleStr));
+                var userDetails = new UserDetailsImpl(id, username, email, null, roleStr);
 
                 var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                logger.debug("✅ JWT ok em {} (email={}) role={}", path, email, roleEnum.name());
+                log.debug("✅ JWT ok em {} (email={}) role={}", path, email, roleStr);
             } else {
-                logger.warn("❌ JWT inválido/expirado em {}", path);
+                log.warn("❌ JWT inválido/expirado em {}", path);
             }
 
         } catch (Exception e) {
-            logger.error("⚠️ Erro ao processar token em {}: {}", path, e.toString());
+            log.error("⚠️ Erro ao processar token em {}: {}", path, e.toString());
         }
 
         filterChain.doFilter(request, response);
@@ -123,16 +116,16 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         return null;
     }
 
-    /** Aceita "USER", "ADMIN", "ROLE_USER", "ROLE_ADMIN". Default: USER */
-    private RoleName toRoleEnum(String roleClaim) {
-        if (!StringUtils.hasText(roleClaim)) return RoleName.USER;
-        String r = roleClaim.trim().toUpperCase();
-        if (r.startsWith("ROLE_")) r = r.substring(5);
-        try {
-            return RoleName.valueOf(r);
-        } catch (IllegalArgumentException ex) {
-            return RoleName.USER;
+    /** Normaliza para "user"|"admin". Aceita "USER"/"ADMIN" e "ROLE_USER"/"ROLE_ADMIN" legados. */
+    private String normalizeRole(String roleClaim) {
+        if (!StringUtils.hasText(roleClaim)) return "user";
+        String r = roleClaim.trim();
+        // remove prefixo ROLE_ se existir
+        if (r.regionMatches(true, 0, "ROLE_", 0, 5)) {
+            r = r.substring(5);
         }
+        r = r.toLowerCase();
+        return (r.equals("admin") ? "admin" : "user");
     }
 
     private String getPath(HttpServletRequest request) {
