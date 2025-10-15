@@ -26,7 +26,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await register(nome, email, senha);
-      setOk("Cadastro realizado com sucesso! Faça login para continuar.");  
+      setOk("Cadastro realizado com sucesso! Faça login para continuar.");
       // Redireciona para login após alguns segundos — opcional:
       setTimeout(() => nav("/login"), 1200);
     } catch (err: any) {

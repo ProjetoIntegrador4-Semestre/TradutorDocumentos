@@ -1,10 +1,5 @@
-// src/services/api.ts
 import axios, { AxiosError } from "axios";
 
-/**
- * BASE URL
- * - Defina VITE_API_BASE_URL no .env/.env.local (ex.: http://localhost:8080  sem /api)
- */
 const API_BASE =
   (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/+$/, "") ||
   "http://localhost:8080";
@@ -235,12 +230,22 @@ export function logout(): void {
 }
 
 /* ============================
-   Google OAuth (opcional)
+   Google OAuth
    ============================ */
 
 export function getGoogleOAuthUrl(): string | null {
-  const u = (import.meta as any)?.env?.VITE_GOOGLE_OAUTH_URL;
-  return u || null;
+  // 1) tenta env
+  const u = (import.meta as any)?.env?.VITE_GOOGLE_OAUTH_URL as string | undefined;
+  if (u && u.trim()) return u.trim();
+
+  // 2) fallback: monta a URL a partir do API_BASE
+  try {
+    const base = API_BASE.replace(/\/+$/, "");
+    const redirect = `${window.location.origin}/oauth/callback`; // ex.: http://localhost:5173/oauth/callback
+    return `${base}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(redirect)}`;
+  } catch {
+    return null;
+  }
 }
 
 export function beginGoogleLogin(): void {

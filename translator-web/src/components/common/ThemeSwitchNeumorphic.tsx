@@ -1,7 +1,7 @@
 import { styled } from "@mui/material/styles";
 import Switch from "@mui/material/Switch";
 
-const ThemeSwitchNeumorphic = styled(Switch)(({ theme }) => ({
+const ThemeSwitchNeumorphic = styled(Switch)(({    }) => ({
   width: 60,
   height: 33,
   padding: 4,

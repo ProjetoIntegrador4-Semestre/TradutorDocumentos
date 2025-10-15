@@ -1,49 +1,32 @@
 // src/pages/OAuthCallback.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { consumeOAuthTokenFromUrl } from "../services/api"; // ajuste o alias se não usa @
-import { useAuth } from "../context/AuthContext";          // opcional, se estiver usando o contexto
-import "../styles/auth.css";
+import { consumeOAuthTokenFromUrl, getMe } from "../services/api";
 
 export default function OAuthCallback() {
   const nav = useNavigate();
-  const { refreshMe } = useAuth?.() ?? { refreshMe: async () => {} }; // fallback se não tiver contexto
-  const [msg, setMsg] = React.useState("Concluindo login...");
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     (async () => {
+      const token = consumeOAuthTokenFromUrl(); // lê ?token=... ou #access_token=...
+      if (!token) {
+        setError("Não foi possível obter o token do Google.");
+        return;
+      }
       try {
-        // tenta extrair token do hash/query e salvar no storage
-        const token = consumeOAuthTokenFromUrl();
-        if (!token) {
-          setMsg("Token não recebido. Tente novamente.");
-          // redireciona para login após breve pausa
-          setTimeout(() => nav("/login", { replace: true }), 1500);
-          return;
-        }
-
-        // opcional: atualiza o perfil logado
-        try {
-          await refreshMe();
-        } catch {
-          // se der erro, segue mesmo assim; o BE pode não expor /auth/me
-        }
-
-        // vá para a tela pós-login
-        nav("/tradutor", { replace: true });
-      } catch (_e) {
-        setMsg("Falha no login com Google. Tente novamente.");
-        setTimeout(() => nav("/login", { replace: true }), 1500);
+        await getMe(); 
+        nav("/translator", { replace: true });
+      } catch {
+        setError("Token inválido ou expirado.");
       }
     })();
-  }, [nav, refreshMe]);
+  }, [nav]);
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <h2>Login com Google</h2>
-        <p className="description">{msg}</p>
-      </div>
+    <div style={{ maxWidth: 480, margin: "15vh auto", padding: 24, textAlign: "center" }}>
+      {!error ? (<><h2>Entrando…</h2><p>Concluindo seu login com o Google.</p></>)
+              : (<><h2>Ops</h2><p>{error}</p><a href="/">Voltar</a></>)}
     </div>
   );
 }
