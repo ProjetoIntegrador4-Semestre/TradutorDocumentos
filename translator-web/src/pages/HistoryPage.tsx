@@ -12,8 +12,19 @@ import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import SlideshowIcon from "@mui/icons-material/Slideshow";
-import { getHistory, type HistoryItem, type HistoryFilters } from "../services/api";
+import {
+  getHistory,
+  type HistoryItem,
+  type HistoryFilters,
+  absoluteUrl,
+} from "../services/api";
 import { saveAs } from "file-saver";
+
+/* ========================
+   Helpers seguras e utils
+   ======================== */
+const safeArray = <T,>(v: T[] | undefined | null): T[] => (Array.isArray(v) ? v : []);
+const arrLen = (v: any[] | undefined | null) => (Array.isArray(v) ? v.length : 0);
 
 function bytesToHuman(n?: number) {
   const num = Number(n || 0);
@@ -23,27 +34,35 @@ function bytesToHuman(n?: number) {
   return `${(num / Math.pow(1024, i)).toFixed(i ? 1 : 0)} ${u[i]}`;
 }
 
+function extOrType(item: HistoryItem): string {
+  const t = (item.fileType || "").toLowerCase();
+  if (t) return t; // se o backend já manda "pdf", "docx" etc.
+  const name = (item.translatedName || item.originalName || "").toLowerCase();
+  const m = name.match(/\.(pdf|docx|pptx)$/i);
+  return m ? m[1].toLowerCase() : "";
+}
+
 function iconForType(item: HistoryItem) {
-  const fileType = String(item?._raw?.file_type || "").toLowerCase();
-  const m = (item.mime || "").toLowerCase();
-  if (fileType.includes("pdf") || m.includes("pdf")) return <PictureAsPdfIcon fontSize="small" />;
-  if (fileType.includes("docx") || m.includes("word") || m.includes("docx")) return <DescriptionIcon fontSize="small" />;
-  if (fileType.includes("pptx") || m.includes("powerpoint") || m.includes("pptx")) return <SlideshowIcon fontSize="small" />;
+  const t = extOrType(item);
+  if (t.includes("pdf")) return <PictureAsPdfIcon fontSize="small" />;
+  if (t.includes("pptx") || t.includes("powerpoint")) return <SlideshowIcon fontSize="small" />;
   return <DescriptionIcon fontSize="small" />;
 }
 
-// ---- helpers de disponibilidade do arquivo ----
+function canPreview(item: HistoryItem) {
+  return extOrType(item).includes("pdf");
+}
+
 async function isDownloadReady(url: string): Promise<boolean> {
-  // 1) tenta HEAD (melhor caso)
+  // 1) HEAD quando disponível
   try {
     const r = await fetch(url, {
       method: "HEAD",
       headers: { Authorization: `Bearer ${localStorage.getItem("access_token") || ""}` },
     });
     if (r.ok) return true;
-    // alguns backends não implementam HEAD -> cai no GET light
   } catch {}
-  // 2) fallback GET mínimo (range 0-0) para não baixar tudo
+  // 2) GET parcial como fallback
   try {
     const r = await fetch(url, {
       method: "GET",
@@ -52,23 +71,38 @@ async function isDownloadReady(url: string): Promise<boolean> {
         Range: "bytes=0-0",
       },
     });
-    // 206 (partial) ou 200 indicam que já existe conteúdo para baixar
     if (r.status === 200 || r.status === 206) return true;
   } catch {}
   return false;
 }
 
-function canPreview(item: HistoryItem) {
-  const fileType = String(item?._raw?.file_type || "").toLowerCase();
-  const m = (item.mime || "").toLowerCase();
-  return fileType.includes("pdf") || m.includes("pdf");
+// Converte "YYYY-MM-DD" em limites do dia local (inclusivo)
+function startOfDayLocal(s?: string) {
+  if (!s) return null;
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+}
+function endOfDayLocal(s?: string) {
+  if (!s) return null;
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999);
+}
+// Normaliza createdAt (string ISO ou epoch) → Date
+function toDateSafe(v?: string | number | null): Date | null {
+  if (v == null) return null;
+  if (typeof v === "number") return new Date(v);
+  const dt = new Date(v);
+  return isNaN(dt.getTime()) ? null : dt;
 }
 
+/* ========================
+   Página
+   ======================== */
 export default function HistoryPage() {
-  // filtros
+  // filtros locais (type/size são client-side por enquanto)
   const [q, setQ] = React.useState("");
-  const [type, setType] = React.useState<HistoryFilters["type"]>("all");
-  const [size, setSize] = React.useState<HistoryFilters["size"]>("all");
+  const [type, setType] = React.useState<"all" | "pdf" | "docx" | "pptx">("all");
+  const [sizeBucket, setSizeBucket] = React.useState<"all" | "small" | "medium" | "large">("all");
   const [dateFrom, setDateFrom] = React.useState<string>("");
   const [dateTo, setDateTo] = React.useState<string>("");
 
@@ -78,13 +112,13 @@ export default function HistoryPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // paginação
+  // paginação (0-based)
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
   // feedback
   const [snack, setSnack] = React.useState<{ open: boolean; msg: string; severity?: "info" | "success" | "warning" | "error" }>({ open: false, msg: "" });
-  const closeSnack = () => setSnack(s => ({ ...s, open: false }));
+  const closeSnack = () => setSnack((s) => ({ ...s, open: false }));
 
   // debounce da busca
   const [qDebounced, setQDebounced] = React.useState(q);
@@ -97,68 +131,107 @@ export default function HistoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const { items, total } = await getHistory({
+      // getHistory -> Paged<HistoryItem>
+      const paged = await getHistory({
+        page,                 // 0-based
+        size: rowsPerPage,    // IMPORTANTE: use "size", não "pageSize"
         q: qDebounced || undefined,
-        type, size,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-        page: page + 1,
-        pageSize: rowsPerPage,
-      });
-      setItems(items);
-      setTotal(total);
+        from: dateFrom || undefined, // será ignorado no servidor? filtramos localmente também
+        to: dateTo || undefined,
+      } as HistoryFilters);
+
+      // conteúdo com tipagem explícita
+      const baseContent: HistoryItem[] = Array.isArray((paged as any)?.content)
+        ? ((paged as any).content as HistoryItem[])
+        : [];
+
+      // --- filtro por data (client-side, inclusivo) ---
+      const fromDate = startOfDayLocal(dateFrom);
+      const toDate = endOfDayLocal(dateTo);
+
+      let data: HistoryItem[] = baseContent;
+      if (fromDate || toDate) {
+        data = data.filter((it) => {
+          const dt = toDateSafe(it.createdAt);
+          if (!dt) return false;
+          if (fromDate && dt < fromDate) return false;
+          if (toDate && dt > toDate) return false;
+          return true;
+        });
+      }
+
+      // --- filtros por tipo e tamanho (client-side) ---
+      if (type !== "all") {
+        data = data.filter((it) => extOrType(it) === type);
+      }
+      if (sizeBucket !== "all") {
+        data = data.filter((it) => {
+          const sz = it.sizeBytes ?? 0;
+          if (sizeBucket === "small") return sz > 0 && sz < 1 * 1024 * 1024;
+          if (sizeBucket === "medium") return sz >= 1 * 1024 * 1024 && sz <= 10 * 1024 * 1024;
+          if (sizeBucket === "large") return sz > 10 * 1024 * 1024;
+          return true;
+        });
+      }
+
+      setItems(data);
+      // se filtramos client-side, total exibido vira o do array filtrado
+      const serverTotal = (paged as any)?.totalElements ?? 0;
+      setTotal((fromDate || toDate || type !== "all" || sizeBucket !== "all") ? data.length : serverTotal);
     } catch (e: any) {
       setError(e?.response?.data?.detail || e?.message || "Falha ao carregar histórico.");
+      setItems([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [qDebounced, type, size, dateFrom, dateTo, page, rowsPerPage]);
+  }, [qDebounced, type, sizeBucket, dateFrom, dateTo, page, rowsPerPage]);
 
   React.useEffect(() => { fetchData(); }, [fetchData]);
 
   const resetFilters = () => {
     setQ("");
     setType("all");
-    setSize("all");
+    setSizeBucket("all");
     setDateFrom("");
     setDateTo("");
     setPage(0);
   };
 
-  // ---- ações ----
+  // ações
   const handlePreview = async (it: HistoryItem) => {
-    const url = it.previewUrl || it.downloadUrl;
-    if (!url) return;
+    const rawUrl = it.downloadUrl;
+    if (!rawUrl) return;
+    const url = absoluteUrl(rawUrl);
     const ready = await isDownloadReady(url);
     if (!ready) {
       setSnack({ open: true, msg: "O arquivo ainda está em processamento. Tente novamente em alguns segundos.", severity: "info" });
       return;
     }
-    // só faz sentido "visualizar" PDF — os demais vão baixar de qualquer jeito
     if (!canPreview(it)) {
       setSnack({ open: true, msg: "Este tipo de arquivo não possui visualização. O download será iniciado.", severity: "info" });
     }
-    window.open(url, "_blank");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const handleDownload = async (it: HistoryItem) => {
-    const url = it.downloadUrl;
-    if (!url) return;
+    const rawUrl = it.downloadUrl;
+    if (!rawUrl) return;
+    const url = absoluteUrl(rawUrl);
     const ready = await isDownloadReady(url);
     if (!ready) {
       setSnack({ open: true, msg: "O arquivo ainda está em processamento. Tente novamente em alguns segundos.", severity: "info" });
       return;
     }
+    const filename = it.translatedName || it.originalName || "download";
     try {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem("access_token") || ""}` }
       });
-      // se o back devolver attachment, isso baixa corretamente
       const blob = await res.blob();
-      saveAs(blob, it.name);
+      saveAs(blob, filename);
     } catch {
-      // fallback: abrir a URL
-      window.open(url, "_blank");
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -200,9 +273,9 @@ export default function HistoryPage() {
             <FormControl sx={{ minWidth: 160 }}>
               <InputLabel>Tamanho</InputLabel>
               <Select
-                value={size}
+                value={sizeBucket}
                 label="Tamanho"
-                onChange={(e) => { setSize(e.target.value as any); setPage(0); }}
+                onChange={(e) => { setSizeBucket(e.target.value as any); setPage(0); }}
               >
                 <MenuItem value="all">Todos</MenuItem>
                 <MenuItem value="small">Pequenos (&lt; 1MB)</MenuItem>
@@ -244,7 +317,7 @@ export default function HistoryPage() {
           {/* Chips-resumo */}
           <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: "wrap" }}>
             {type !== "all" && <Chip label={`Tipo: ${type.toUpperCase()}`} onDelete={() => setType("all")} />}
-            {size !== "all" && <Chip label={`Tamanho: ${size}`} onDelete={() => setSize("all")} />}
+            {sizeBucket !== "all" && <Chip label={`Tamanho: ${sizeBucket}`} onDelete={() => setSizeBucket("all")} />}
             {(dateFrom || dateTo) && (
               <Chip
                 label={`Data: ${dateFrom || "…"} → ${dateTo || "…"}`}
@@ -284,7 +357,7 @@ export default function HistoryPage() {
                   </TableRow>
                 )}
 
-                {!loading && items.length === 0 && (
+                {!loading && arrLen(items) === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} align="center">
                       <Typography variant="body2" color="text.secondary">
@@ -294,33 +367,29 @@ export default function HistoryPage() {
                   </TableRow>
                 )}
 
-                {!loading && items.map((it) => {
-                  const typeLabel =
-                    (it._raw?.file_type as string) ||
-                    (it.mime ? it.mime.split("/").pop() || "-" : "-");
-                  const langFrom = String(it?._raw?.detected_lang || "").toUpperCase() || "?";
-                  const langTo = String(it?.lang || "").toUpperCase() || "-";
-                  // se o backend já mandar status, podemos usar:
-                  const isProcessing = String(it?.status || it?._raw?.status || "").toLowerCase() === "processing";
+                {!loading && safeArray(items).map((it) => {
+                  const displayName = it.translatedName || it.originalName || "-";
+                  const typeLabel = (extOrType(it) || "-").toUpperCase();
+                  const sz = bytesToHuman(it.sizeBytes);
+                  const langFrom = (it.sourceLang || "?").toUpperCase();
+                  const langTo = (it.targetLang || "-").toUpperCase();
+                  const created = it.createdAt ? new Date(it.createdAt) : null;
 
                   return (
-                    <TableRow key={it.id} hover>
+                    <TableRow key={String(it.id)} hover>
                       <TableCell>
                         <Stack direction="row" spacing={1} alignItems="center">
                           {iconForType(it)}
                           <Box sx={{ minWidth: 0 }}>
-                            <Typography variant="body2" noWrap title={it.name}>{it.name}</Typography>
-                            {isProcessing && (
-                              <Typography variant="caption" color="text.secondary">processando…</Typography>
-                            )}
+                            <Typography variant="body2" noWrap title={displayName}>{displayName}</Typography>
                           </Box>
                         </Stack>
                       </TableCell>
 
-                      <TableCell>{String(typeLabel).toUpperCase()}</TableCell>
-                      <TableCell>{bytesToHuman(it.size)}</TableCell>
+                      <TableCell>{typeLabel}</TableCell>
+                      <TableCell>{sz}</TableCell>
                       <TableCell>{`${langFrom} → ${langTo}`}</TableCell>
-                      <TableCell>{new Date(it.createdAt).toLocaleString()}</TableCell>
+                      <TableCell>{created ? created.toLocaleString() : "—"}</TableCell>
 
                       <TableCell align="right">
                         <Stack direction="row" spacing={1} justifyContent="flex-end">
@@ -328,7 +397,7 @@ export default function HistoryPage() {
                             <span>
                               <IconButton
                                 size="small"
-                                disabled={(!it.previewUrl && !it.downloadUrl) || isProcessing}
+                                disabled={!it.downloadUrl}
                                 onClick={() => handlePreview(it)}
                               >
                                 <OpenInNewIcon fontSize="small" />
@@ -340,7 +409,7 @@ export default function HistoryPage() {
                             <span>
                               <IconButton
                                 size="small"
-                                disabled={!it.downloadUrl || isProcessing}
+                                disabled={!it.downloadUrl}
                                 onClick={() => handleDownload(it)}
                               >
                                 <DownloadIcon fontSize="small" />
@@ -358,7 +427,7 @@ export default function HistoryPage() {
 
           <TablePagination
             component="div"
-            count={total}
+            count={total || 0}
             page={page}
             onPageChange={(_, p) => setPage(p)}
             rowsPerPage={rowsPerPage}
