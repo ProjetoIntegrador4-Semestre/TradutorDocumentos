@@ -5,6 +5,7 @@ import TranslateIcon from "@mui/icons-material/Translate";
 import FolderIcon from "@mui/icons-material/Folder";
 import LogoutIcon from "@mui/icons-material/Logout";
 import HistoryIcon from "@mui/icons-material/History";
+import SettingsIcon from '@mui/icons-material/Settings';
 import { useLocation, useNavigate } from "react-router-dom";
 import React from "react";
 import { ThemeModeContext } from "../../hooks/useThemeMode";
@@ -13,7 +14,8 @@ import ThemeSwitchNeumorphic from "../common/ThemeSwitchNeumorphic";
 const items = [
   { to: "/tradutor", label: "Tradutor", icon: <TranslateIcon /> },
   { to: "/arquivos", label: "Arquivos", icon: <FolderIcon /> },
-  { to: "/historico", label: "Histórico", icon: <HistoryIcon /> }, // <—
+  { to: "/historico", label: "Histórico", icon: <HistoryIcon /> },
+  { to: "/configuracoes", label: "Configurações", icon: <SettingsIcon /> }, 
 ];
 
 export default function Sidebar() {

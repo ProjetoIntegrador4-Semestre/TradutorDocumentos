@@ -1,9 +1,7 @@
-// src/pages/TranslatorPage.tsx
 import React from "react";
 import { useAuth } from "../context/AuthContext";
 import { getLanguages, uploadAndTranslate } from "../services/api";
 import {
-  Box,
   Stack,
   Card,
   CardHeader,
@@ -19,10 +17,27 @@ import {
   MenuItem,
   Chip,
   LinearProgress,
+  Box,
 } from "@mui/material";
 
 type Lang = { code: string; name: string };
 type Status = "idle" | "ready" | "translating" | "done" | "error";
+
+// Preferências (mesmo formato usado na SettingsPage)
+type Prefs = {
+  defaultTargetLang?: string;
+  pdfPreview?: boolean; // se false, não mostra iframe para PDF
+};
+const PREFS_KEY = "app_prefs_v1";
+
+function loadPrefs(): Prefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
 
 export default function TranslatorPage() {
   const { isAuthenticated } = useAuth();
@@ -40,6 +55,9 @@ export default function TranslatorPage() {
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [translatedBlob, setTranslatedBlob] = React.useState<Blob | null>(null);
   const [translatedFilename, setTranslatedFilename] = React.useState<string>("");
+
+  // Prefs locais
+  const prefs = React.useMemo(loadPrefs, []);
 
   React.useEffect(() => {
     return () => {
@@ -63,12 +81,16 @@ export default function TranslatorPage() {
         const data = await getLanguages();
         if (!mounted) return;
         setLangs(data);
+
+        // Preferência de idioma padrão, se existir e for válido
+
         const def =
           data.find((d) => d.code === "pt")?.code ||
           data.find((d) => d.code === "en")?.code ||
           data[0]?.code ||
           "";
         setTargetLang(def);
+
       } catch {
         if (!mounted) return;
         setError("Não foi possível carregar os idiomas.");
@@ -79,7 +101,7 @@ export default function TranslatorPage() {
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, prefs?.defaultTargetLang]);
 
   function resetAll() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -132,11 +154,13 @@ export default function TranslatorPage() {
         (blob.type && blob.type.includes("application/pdf")) ||
         name.toLowerCase().endsWith(".pdf");
 
-      if (isPdf) {
+      // Respeita preferência pdfPreview (default true). Se false, não abre iframe.
+      const wantsPreview = prefs?.pdfPreview ?? true;
+      if (isPdf && wantsPreview) {
         const url = URL.createObjectURL(blob);
         setPreviewUrl(url);
       } else {
-        setPreviewUrl(null);
+        setPreviewUrl(null); // mostra cartão com botão "Baixar"
       }
 
       setStatus("done");
@@ -231,11 +255,7 @@ export default function TranslatorPage() {
             </FormControl>
 
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <Button
-                component="label"
-                variant="outlined"
-                sx={{ alignSelf: "flex-start" }}
-              >
+              <Button component="label" variant="outlined" sx={{ alignSelf: "flex-start" }}>
                 Escolher arquivo
                 <input
                   type="file"

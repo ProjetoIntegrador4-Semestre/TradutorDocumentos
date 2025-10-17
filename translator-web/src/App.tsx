@@ -7,6 +7,7 @@ import TranslatorPage from "./pages/TranslatorPage";
 import OAuthCallback from "./pages/OAuthCallback";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import SettingsPage from "./pages/SettingsPage";
 import HistoryPage from "./pages/HistoryPage";
 
 export default function App() {
@@ -28,7 +29,7 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      
+
       <Route
         path="/historico"
         element={
@@ -40,7 +41,16 @@ export default function App() {
         }
       />
 
-
+      <Route
+        path="/configuracoes"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <SettingsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="/" element={<Navigate to="/login" />} />
       <Route path="*" element={<Navigate to="/login" />} />
