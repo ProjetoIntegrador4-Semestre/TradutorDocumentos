@@ -1,4 +1,3 @@
-// src/components/Layout/Topbar.tsx
 import React from "react";
 import { Avatar, Box, IconButton, Typography, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -11,6 +10,11 @@ type MeLite = {
   email?: string;
   picture?: string;
 };
+
+function stripParenSuffix(s: string): string {
+  // Remove sufixos do tipo " (algo)" no final do nome
+  return s.replace(/\s*\([^)]*\)\s*$/, "").trim();
+}
 
 export default function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const theme = useTheme();
@@ -42,12 +46,13 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
     return u.includes("@") ? u.split("@")[0] : u;
   }, [me.username]);
 
-  // Não usamos mais o e-mail como fallback para exibição
-  const displayName =
+  // Preferir 'name', depois 'username', e remover sufixo entre parênteses
+  const rawDisplayName =
     me.name?.trim() ||
     normalizedUsername ||
     "Usuário";
 
+  const displayName = stripParenSuffix(rawDisplayName);
   const avatarLetter = (displayName || "U").charAt(0).toUpperCase();
 
   return (

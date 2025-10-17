@@ -184,18 +184,24 @@ export async function register(name: string, email: string, password: string): P
 
 /** Lê o "me" decodificando o JWT local (sem chamar /me) */
 export async function getMe(): Promise<MeDTO> {
-  const token = getToken();
+  const token = localStorage.getItem("access_token");
   if (!token) throw new Error("Sem token");
 
   const payload = decodeJwtPayload<any>(token) || {};
   const email = payload.email || "";
   const role = (payload.role || "user") as RoleString;
 
+  // preferir 'name', depois 'username'
+  const usernameFromToken =
+    (payload.name && String(payload.name).trim()) ||
+    (payload.username && String(payload.username).trim()) ||
+    (email ? email.split("@")[0] : "user");
+
   return {
     id: payload.id ?? payload.sub ?? "me",
     email,
     role,
-    username: payload.username || (email ? email.split("@")[0] : "user"),
+    username: usernameFromToken,
   };
 }
 

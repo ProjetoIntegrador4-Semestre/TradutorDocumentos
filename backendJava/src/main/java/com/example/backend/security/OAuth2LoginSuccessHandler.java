@@ -81,7 +81,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         });
 
         // Gera JWT
-        String token = jwtUtils.generateJwtToken(UserDetailsImpl.build(user));
+        String token = jwtUtils.generateJwtToken(UserDetailsImpl.build(user), user.getUsername());
 
         // Se a URL do front foi configurada, REDIRECIONA com o token.
         if (frontendCallback != null && !frontendCallback.isBlank()) {
