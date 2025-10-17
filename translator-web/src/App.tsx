@@ -17,7 +17,6 @@ export default function App() {
       <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />  {/* nova */}
       <Route path="/resetar-senha" element={<ResetPasswordPage />} />    {/* nova */}
       <Route path="/oauth/callback" element={<OAuthCallback />} />
-      <Route path="/oauth/callback/*" element={<OAuthCallback />} />
 
       <Route
         path="/tradutor"

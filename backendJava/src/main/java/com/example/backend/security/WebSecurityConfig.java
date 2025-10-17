@@ -114,7 +114,7 @@ public class WebSecurityConfig {
             .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             // OAuth2 login (Google)
             .oauth2Login(oauth -> oauth
-                .defaultSuccessUrl("/api/auth/google/success", true) // chama seu controller JSON
+                .successHandler(oAuth2LoginSuccessHandler) // chama seu controller JSON
                 .failureUrl("/oauth2/error")                         // se der ruim, vai pra /oauth2/error
             )
             // Provider de auth (credenciais locais)

@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+// src/context/AuthContext.tsx
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { MeDTO } from "../services/api";
 import {
   login as apiLogin,
@@ -7,7 +15,7 @@ import {
   logout as apiLogout,
   requestPasswordReset,
   resetPassword as apiResetPassword,
-  getGoogleOAuthUrl,
+  beginGoogleLogin, // ⬅️ usar direto
 } from "../services/api";
 
 type AuthState = {
@@ -29,56 +37,70 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [user, setUser] = useState<MeDTO | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /** Lê o token local e tenta montar o "me" decodificando o JWT */
   const refreshMe = useCallback(async () => {
     try {
       const me = await getMe();
       setUser(me);
-    } catch (_e) {
-      // token inválido/expirado ou usuário não encontrado
+    } catch {
       setUser(null);
     }
   }, []);
 
-  // Bootstrap: se existir token salvo, tenta buscar /auth/me
+  /** Bootstrap inicial */
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
     (async () => {
-      if (token) {
-        await refreshMe();
-      } else {
-        setUser(null);
-      }
+      await refreshMe();
       setLoading(false);
     })();
   }, [refreshMe]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      await apiLogin(email, password);
-      await refreshMe();
-    } finally {
-      setLoading(false);
-    }
+  /** Reage a mudanças do token (login/logout/OAuth) via evento "auth:change" */
+  useEffect(() => {
+    const onAuthChange = () => {
+      // Atualiza imediatamente a identidade
+      refreshMe();
+    };
+    window.addEventListener("auth:change", onAuthChange);
+    return () => window.removeEventListener("auth:change", onAuthChange);
   }, [refreshMe]);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    setLoading(true);
-    try {
-      await apiRegister(name, email, password);
-      // opcional: já efetuar login após cadastro
-      await apiLogin(email, password);
-      await refreshMe();
-    } finally {
-      setLoading(false);
-    }
-  }, [refreshMe]);
+  /** Login tradicional */
+  const login = useCallback(
+    async (email: string, password: string) => {
+      setLoading(true);
+      try {
+        await apiLogin(email, password);
+        await refreshMe();
+      } finally {
+        setLoading(false);
+      }
+    },
+    [refreshMe]
+  );
 
+  /** Cadastro + login opcional */
+  const register = useCallback(
+    async (name: string, email: string, password: string) => {
+      setLoading(true);
+      try {
+        await apiRegister(name, email, password);
+        await apiLogin(email, password); // opcional: já autentica
+        await refreshMe();
+      } finally {
+        setLoading(false);
+      }
+    },
+    [refreshMe]
+  );
+
+  /** Logout */
   const logout = useCallback(() => {
-    apiLogout();
+    apiLogout(); // limpa token e dispara "auth:change"
     setUser(null);
   }, []);
 
+  /** Forgot/reset */
   const forgotPassword = useCallback(async (email: string) => {
     await requestPasswordReset(email);
   }, []);
@@ -87,27 +109,26 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     await apiResetPassword(token, newPassword);
   }, []);
 
+  /** Google OAuth (leva para o backend iniciar o fluxo) */
   const startGoogleLogin = useCallback(() => {
-    const url = getGoogleOAuthUrl();
-    if (url) {
-      window.location.href = url;
-    } else {
-      console.warn("VITE_GOOGLE_OAUTH_URL não configurada.");
-    }
+    beginGoogleLogin();
   }, []);
 
-  const value = useMemo<AuthState>(() => ({
-    user,
-    loading,
-    isAuthenticated: !!user,
-    login,
-    register,
-    logout,
-    refreshMe,
-    forgotPassword,
-    resetPassword,
-    startGoogleLogin,
-  }), [user, loading, login, register, logout, refreshMe, forgotPassword, resetPassword, startGoogleLogin]);
+  const value = useMemo<AuthState>(
+    () => ({
+      user,
+      loading,
+      isAuthenticated: !!user,
+      login,
+      register,
+      logout,
+      refreshMe,
+      forgotPassword,
+      resetPassword,
+      startGoogleLogin,
+    }),
+    [user, loading, login, register, logout, refreshMe, forgotPassword, resetPassword, startGoogleLogin]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
@@ -118,12 +139,12 @@ export function useAuth() {
   return ctx;
 }
 
-/**
- * Componente helper opcional para proteger rotas
- */
-export const RequireAuth: React.FC<React.PropsWithChildren<{ fallback?: React.ReactNode }>> = ({ children, fallback = null }) => {
+/** Proteção de rotas opcional */
+export const RequireAuth: React.FC<
+  React.PropsWithChildren<{ fallback?: React.ReactNode }>
+> = ({ children, fallback = null }) => {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return null; // ou um spinner
+  if (loading) return null; // pode trocar por spinner
   if (!isAuthenticated) return <>{fallback}</>;
   return <>{children}</>;
 };

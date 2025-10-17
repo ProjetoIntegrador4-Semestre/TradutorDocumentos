@@ -1,49 +1,54 @@
+// src/services/api.ts
 import axios, { AxiosError } from "axios";
 
+/** ====== BASE / ENDPOINTS ====== */
 const API_BASE =
   (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/+$/, "") ||
   "http://localhost:8080";
 
-/** Token usado APENAS no /api/auth/signin (se o backend exigir) */
 const BOOT_TOKEN = (import.meta as any)?.env?.VITE_BOOT_TOKEN || "";
 
-/** Endpoints mapeados para o SEU backend (auth em /api, demais sem /api) */
 export const ENDPOINTS = {
-  // Auth
+  // Auth (via /api no backend)
   login: "/api/auth/signin",
   register: "/api/auth/signup",
 
-  // (sem /api no backend)
+  // Endpoints públicos (sem /api no seu backend)
   translate: "/translate-file",
   languages: "/languages",
   records: "/records",
   files: "/files",
 
-  // password reset (ajuste se diferente no seu backend)
+  // Password reset
   forgot: "/auth/password/forgot",
   reset: "/auth/password/reset",
 } as const;
 
-/* ============================
-   Axios instance + interceptors
-   ============================ */
+/** ====== Axios ====== */
 export const api = axios.create({
   baseURL: API_BASE.endsWith("/") ? API_BASE : API_BASE + "/",
   timeout: 60_000,
   withCredentials: false,
 });
 
+/** ====== Token helpers (com evento) ====== */
+function notifyAuthChange() {
+  try { window.dispatchEvent(new Event("auth:change")); } catch {}
+}
+
 function getToken(): string | null {
   return localStorage.getItem("access_token");
 }
 export function setToken(token: string) {
   localStorage.setItem("access_token", token);
+  notifyAuthChange();
 }
 export function clearToken() {
   localStorage.removeItem("access_token");
+  notifyAuthChange();
 }
 
-/** Seta Authorization dinamicamente: BOOT_TOKEN só para /api/auth/signin; JWT para o resto */
+/** ====== Interceptors ====== */
 api.interceptors.request.use((config) => {
   const token = getToken();
   const url = (config.url || "").replace(/^\/+/, "");
@@ -63,9 +68,7 @@ api.interceptors.response.use(
   (err: AxiosError) => Promise.reject(err)
 );
 
-/* ===========
-   Tipagens
-   =========== */
+/** ====== Tipagens ====== */
 export type RoleString =
   | "ROLE_USER" | "ROLE_ADMIN"
   | "USER" | "ADMIN"
@@ -87,7 +90,7 @@ export interface TranslationRecordDTO {
   fileType?: string;
   sizeBytes?: number;
   status?: "DONE" | "PENDING" | "ERROR";
-  createdAt?: string;
+  createdAt?: string | number;
   downloadUrl?: string;
 }
 
@@ -96,26 +99,19 @@ export interface Paged<T> {
   totalElements: number;
   totalPages: number;
   number: number; // current page
-  size: number; // page size
+  size: number;   // page size
 }
 
-/* ============================
-   Helpers
-   ============================ */
+/** ====== Helpers ====== */
 function parseContentDispositionFilename(header?: string | null): string | null {
   if (!header) return null;
   try {
     const match = /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i.exec(header);
     if (match?.[1]) {
-      try {
-        return decodeURIComponent(match[1]);
-      } catch {
-        return match[1];
-      }
+      try   { return decodeURIComponent(match[1]); }
+      catch { return match[1]; }
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
   return null;
 }
 
@@ -124,9 +120,7 @@ function b64UrlToJson<T = any>(b64url: string): T | null {
     const base64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
     const json = atob(base64);
     return JSON.parse(json);
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function decodeJwtPayload<T = any>(token: string): T | null {
@@ -134,12 +128,9 @@ function decodeJwtPayload<T = any>(token: string): T | null {
     const parts = token.split(".");
     if (parts.length < 2) return null;
     return b64UrlToJson<T>(parts[1]);
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-/** Extrai msg de erro do Axios */
 function extractServerMessage(err: unknown): string | undefined {
   const ax = err as AxiosError<any>;
   const data = ax?.response?.data as any;
@@ -147,14 +138,12 @@ function extractServerMessage(err: unknown): string | undefined {
   return data?.message || data?.error || (typeof data === "string" ? data : undefined);
 }
 
-/** Constrói URL absoluta a partir de um caminho do backend */
 export function absoluteUrl(path: string): string {
   const base = API_BASE.replace(/\/+$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
   return base + p;
 }
 
-/** Faz download como Blob, aceitando "/files/xxx" ou apenas "xxx" */
 async function fetchDownloadAsBlob(pathOrFilename: string): Promise<Blob> {
   const url = pathOrFilename.startsWith("/files/")
     ? pathOrFilename
@@ -163,23 +152,18 @@ async function fetchDownloadAsBlob(pathOrFilename: string): Promise<Blob> {
   return resp.data as Blob;
 }
 
-/* ============================
-   Auth
-   ============================ */
-
+/** ====== Auth (usuário/senha) ====== */
 export async function login(email: string, password: string): Promise<MeDTO> {
   const resp = await api.post(
     ENDPOINTS.login,
     { email, password },
     { headers: { "Content-Type": "application/json" } }
   );
-
   const data = resp.data as any;
   const token: string = data?.accessToken || data?.access_token || data?.token || "";
   if (!token) throw new Error("Token não recebido no login.");
   setToken(token);
 
-  // Constrói "me" local com base no próprio response
   const me: MeDTO = {
     id: data?.id ?? data?.userId ?? data?.sub ?? "me",
     email: data?.email,
@@ -189,26 +173,16 @@ export async function login(email: string, password: string): Promise<MeDTO> {
   return me;
 }
 
-/** Cadastro — mantém compatibilidade com telas existentes */
-export async function register(
-  name: string,
-  email: string,
-  password: string
-): Promise<void> {
+export async function register(name: string, email: string, password: string): Promise<void> {
   const username = name?.trim() || email.split("@")[0];
   await api.post(
     ENDPOINTS.register,
-    {
-      username,
-      email,
-      password,
-      role: ["user"], // ajuste para "user" (string) se o backend esperar string única
-    },
+    { username, email, password, role: ["user"] },
     { headers: { "Content-Type": "application/json" } }
   );
 }
 
-/** Decodifica o JWT do localStorage para recuperar o "me" sem chamar /me */
+/** Lê o "me" decodificando o JWT local (sem chamar /me) */
 export async function getMe(): Promise<MeDTO> {
   const token = getToken();
   if (!token) throw new Error("Sem token");
@@ -229,20 +203,14 @@ export function logout(): void {
   clearToken();
 }
 
-/* ============================
-   Google OAuth
-   ============================ */
-
+/** ====== Google OAuth ====== */
 export function getGoogleOAuthUrl(): string | null {
-  // 1) tenta env
   const u = (import.meta as any)?.env?.VITE_GOOGLE_OAUTH_URL as string | undefined;
   if (u && u.trim()) return u.trim();
-
-  // 2) fallback: monta a URL a partir do API_BASE
   try {
     const base = API_BASE.replace(/\/+$/, "");
-    const redirect = `${window.location.origin}/oauth/callback`; // ex.: http://localhost:5173/oauth/callback
-    return `${base}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(redirect)}`;
+    // backend agora redireciona sempre para o callback configurado nele
+    return `${base}/oauth2/authorization/google`;
   } catch {
     return null;
   }
@@ -257,10 +225,7 @@ export function beginGoogleLogin(): void {
   window.location.href = url;
 }
 
-/**
- * Lê token do callback OAuth (hash ou query), persiste e limpa a URL.
- * Retorna o token lido (se houver).
- */
+/** Lê token do callback (?token=... ou #access_token=...), salva e limpa a URL */
 export function consumeOAuthTokenFromUrl(): string | null {
   const search = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -277,17 +242,13 @@ export function consumeOAuthTokenFromUrl(): string | null {
     try {
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
-    } catch {
-      // ignore
-    }
+    } catch {}
     return token;
   }
   return null;
 }
 
-/* ============================
-   Tradução de arquivo
-   ============================ */
+/** ====== Tradução de arquivo ====== */
 export interface TranslateParams {
   target_lang?: string;
   source_lang?: string;
@@ -302,7 +263,6 @@ export async function uploadAndTranslate(
   const form = new FormData();
   form.append("file", file);
 
-  // Backend espera camelCase:  
   const target = params.targetLang || params.target_lang;
   const source = params.sourceLang || params.source_lang;
 
@@ -312,15 +272,12 @@ export async function uploadAndTranslate(
 
   form.append("targetLang", target);
   form.append("target_lang", target);
-
   if (source && source.trim()) {
     form.append("sourceLang", source);
     form.append("source_lang", source);
   }
 
-  const resp = await api.post(ENDPOINTS.translate, form, {
-    responseType: "blob",
-  });
+  const resp = await api.post(ENDPOINTS.translate, form, { responseType: "blob" });
 
   const contentType = String(resp.headers["content-type"] || "");
   const isJson =
@@ -352,9 +309,7 @@ export async function downloadFile(filename: string): Promise<Blob> {
   return fetchDownloadAsBlob(filename);
 }
 
-/* ============================
-   Línguas & Histórico
-   ============================ */
+/** ====== Línguas & Histórico ====== */
 export async function getLanguages(): Promise<Array<{ code: string; name: string }>> {
   const r = await api.get(ENDPOINTS.languages);
   return (r.data as any[]) || [];
@@ -432,7 +387,7 @@ export async function getRecords(
   };
 }
 
-/* ======== SHIMS DE COMPATIBILIDADE ======== */
+/** ====== Shims ====== */
 export type HistoryItem = TranslationRecordDTO;
 export type HistoryFilters = RecordsQuery;
 
@@ -442,9 +397,7 @@ export async function getHistory(
   return getRecords(filters);
 }
 
-/* ============================
-   Humanizers de erro
-   ============================ */
+/** ====== Humanizers ====== */
 export function humanizeAuthError(err: unknown): string {
   const ax = err as AxiosError;
   const status = ax?.response?.status;
@@ -469,20 +422,10 @@ export function humanizeSignupError(err: unknown): string {
   return msg || "Não foi possível concluir o cadastro.";
 }
 
-// --- Password Reset ---
+/** ====== Password reset ====== */
 export async function requestPasswordReset(email: string): Promise<void> {
-  await api.post(
-    ENDPOINTS.forgot,
-    { email },
-    { headers: { "Content-Type": "application/json" } }
-  );
+  await api.post(ENDPOINTS.forgot, { email }, { headers: { "Content-Type": "application/json" } });
 }
-
 export async function resetPassword(token: string, newPassword: string): Promise<void> {
-  await api.post(
-    ENDPOINTS.reset,
-    { token, password: newPassword },
-    { headers: { "Content-Type": "application/json" } }
-  );
+  await api.post(ENDPOINTS.reset, { token, password: newPassword }, { headers: { "Content-Type": "application/json" } });
 }
-
