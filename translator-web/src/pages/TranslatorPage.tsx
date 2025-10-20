@@ -2,14 +2,12 @@ import React from "react";
 import { useAuth } from "../context/AuthContext";
 import { getLanguages, uploadAndTranslate } from "../services/api";
 import {
-  Stack,
-  Card,
-  CardHeader,
-  CardContent,
-  CardActions,
+  Box,
+  Paper,
   Typography,
   Button,
   Alert,
+  Stack,
   Divider,
   FormControl,
   InputLabel,
@@ -17,27 +15,10 @@ import {
   MenuItem,
   Chip,
   LinearProgress,
-  Box,
 } from "@mui/material";
 
 type Lang = { code: string; name: string };
 type Status = "idle" | "ready" | "translating" | "done" | "error";
-
-// Preferências (mesmo formato usado na SettingsPage)
-type Prefs = {
-  defaultTargetLang?: string;
-  pdfPreview?: boolean; // se false, não mostra iframe para PDF
-};
-const PREFS_KEY = "app_prefs_v1";
-
-function loadPrefs(): Prefs {
-  try {
-    const raw = localStorage.getItem(PREFS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
 
 export default function TranslatorPage() {
   const { isAuthenticated } = useAuth();
@@ -55,9 +36,6 @@ export default function TranslatorPage() {
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [translatedBlob, setTranslatedBlob] = React.useState<Blob | null>(null);
   const [translatedFilename, setTranslatedFilename] = React.useState<string>("");
-
-  // Prefs locais
-  const prefs = React.useMemo(loadPrefs, []);
 
   React.useEffect(() => {
     return () => {
@@ -81,16 +59,12 @@ export default function TranslatorPage() {
         const data = await getLanguages();
         if (!mounted) return;
         setLangs(data);
-
-        // Preferência de idioma padrão, se existir e for válido
-
         const def =
           data.find((d) => d.code === "pt")?.code ||
           data.find((d) => d.code === "en")?.code ||
           data[0]?.code ||
           "";
         setTargetLang(def);
-
       } catch {
         if (!mounted) return;
         setError("Não foi possível carregar os idiomas.");
@@ -101,7 +75,7 @@ export default function TranslatorPage() {
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated, prefs?.defaultTargetLang]);
+  }, [isAuthenticated]);
 
   function resetAll() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -154,13 +128,11 @@ export default function TranslatorPage() {
         (blob.type && blob.type.includes("application/pdf")) ||
         name.toLowerCase().endsWith(".pdf");
 
-      // Respeita preferência pdfPreview (default true). Se false, não abre iframe.
-      const wantsPreview = prefs?.pdfPreview ?? true;
-      if (isPdf && wantsPreview) {
+      if (isPdf) {
         const url = URL.createObjectURL(blob);
         setPreviewUrl(url);
       } else {
-        setPreviewUrl(null); // mostra cartão com botão "Baixar"
+        setPreviewUrl(null); // resultado não-preview
       }
 
       setStatus("done");
@@ -179,179 +151,220 @@ export default function TranslatorPage() {
   }
 
   // Derivados de estado
-  const disabledTranslate =
-    !isAuthenticated || langsLoading || !file || !targetLang || status === "translating";
+  const disabledTranslate = !isAuthenticated || langsLoading || !file || !targetLang || status === "translating";
   const hasResult = status === "done" && translatedBlob;
   const isPdfResult = !!previewUrl;
 
   return (
-    <Stack spacing={3} sx={{ p: 2, maxWidth: 1100, mx: "auto" }}>
-      {/* Card principal com título, status e formulário */}
-      <Card>
-        <CardHeader title="Traduzir Documento" />
-        <CardContent>
-          {!isAuthenticated && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <strong>Faça login</strong> para carregar a lista de idiomas e enviar arquivos.
-            </Alert>
+    <Box
+      sx={{
+        maxWidth: 900,
+        mx: "auto",
+        p: { xs: 2, sm: 3 },
+        bgcolor: "background.default",
+        color: "text.primary",
+      }}
+    >
+      <Typography variant="h4" fontWeight={700} gutterBottom>
+        Traduzir Documento
+      </Typography>
+
+      {!isAuthenticated && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <strong>Faça login</strong> para carregar a lista de idiomas e enviar arquivos.
+        </Alert>
+      )}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* STATUS HEADER */}
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 2,
+          mb: 2,
+          borderRadius: 2,
+          borderColor: "divider",
+          backgroundColor: "background.paper",
+        }}
+      >
+        <Stack direction={{ xs: "column", sm: "row" }} alignItems="center" spacing={1.5}>
+          <Typography variant="subtitle2" sx={{ minWidth: 120 }}>
+            Status:
+          </Typography>
+          {status === "translating" && (
+            <>
+              <Chip color="info" label="Traduzindo…" />
+              <Box sx={{ flex: 1 }}>
+                <LinearProgress />
+              </Box>
+            </>
           )}
+          {status === "done" && <Chip color="success" label="Tradução concluída" />}
+          {status === "idle" && <Chip variant="outlined" label="Aguardando arquivo" />}
+          {status === "ready" && <Chip variant="outlined" color="primary" label="Pronto para traduzir" />}
+          {status === "error" && <Chip color="error" label="Erro na tradução" />}
+        </Stack>
+      </Paper>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          {/* STATUS */}
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            alignItems="center"
-            spacing={1.5}
-            sx={{
-              p: 2,
-              mb: 2,
-              border: 1,
-              borderColor: "divider",
-              borderRadius: 2,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Typography variant="subtitle2" sx={{ minWidth: 120 }}>
-              Status:
-            </Typography>
-            {status === "translating" && (
-              <>
-                <Chip color="info" label="Traduzindo…" />
-                <Box sx={{ flex: 1 }}>
-                  <LinearProgress />
-                </Box>
-              </>
-            )}
-            {status === "done" && <Chip color="success" label="Tradução concluída" />}
-            {status === "idle" && <Chip variant="outlined" label="Aguardando arquivo" />}
-            {status === "ready" && <Chip variant="outlined" color="primary" label="Pronto para traduzir" />}
-            {status === "error" && <Chip color="error" label="Erro na tradução" />}
-          </Stack>
-
-          {/* FORMULÁRIO */}
-          <Stack spacing={2} sx={{ opacity: langsLoading ? 0.7 : 1 }}>
-            <FormControl
-              fullWidth
-              disabled={!isAuthenticated || langsLoading || langs.length === 0}
+      {/* QUADRO 1: Formulário */}
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 2.5,
+          borderColor: "divider",
+          borderRadius: 2,
+          backgroundColor: "background.paper",
+          opacity: langsLoading ? 0.7 : 1,
+        }}
+      >
+        <Stack spacing={2}>
+          <FormControl fullWidth disabled={!isAuthenticated || langsLoading || langs.length === 0}>
+            <InputLabel id="target-lang-label">Idioma de destino</InputLabel>
+            <Select
+              labelId="target-lang-label"
+              value={targetLang}
+              label="Idioma de destino"
+              onChange={(e) => setTargetLang(e.target.value)}
             >
-              <InputLabel id="target-lang-label">Idioma de destino</InputLabel>
-              <Select
-                labelId="target-lang-label"
-                value={targetLang}
-                label="Idioma de destino"
-                onChange={(e) => setTargetLang(e.target.value)}
-              >
-                {langs.map((l) => (
-                  <MenuItem key={l.code} value={l.code}>
-                    {l.name} ({l.code})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+              {langs.map((l) => (
+                <MenuItem key={l.code} value={l.code}>
+                  {l.name} ({l.code})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Button component="label" variant="outlined" sx={{ alignSelf: "flex-start" }}>
-                Escolher arquivo
-                <input
-                  type="file"
-                  hidden
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] || null;
-                    setFile(f);
-                    setStatus(f ? "ready" : "idle");
-                    // limpar resultado anterior ao trocar arquivo
-                    if (previewUrl) URL.revokeObjectURL(previewUrl);
-                    setPreviewUrl(null);
-                    setTranslatedBlob(null);
-                    setTranslatedFilename("");
-                  }}
-                />
-              </Button>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Button
+              component="label"
+              variant="outlined"
+              sx={{ alignSelf: "flex-start" }}
+            >
+              Escolher arquivo
+              <input type="file" hidden
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const f = e.target.files?.[0] || null;
+                  setFile(f);
+                  setStatus(f ? "ready" : "idle");
+                  // limpamos resultado anterior ao trocar arquivo
+                  if (previewUrl) URL.revokeObjectURL(previewUrl);
+                  setPreviewUrl(null);
+                  setTranslatedBlob(null);
+                  setTranslatedFilename("");
+                }} />
+            </Button>
 
-              {file && (
-                <Chip
-                  variant="outlined"
-                  label={`Selecionado: ${file.name}`}
-                  onDelete={() => {
-                    setFile(null);
-                    setStatus("idle");
-                  }}
-                />
-              )}
-            </Stack>
-
-            <Divider />
-
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <Button
-                variant="contained"
-                onClick={handleTranslate}
-                disabled={disabledTranslate}
-              >
-                {status === "translating" ? "Traduzindo..." : "Traduzir"}
-              </Button>
-
-              {hasResult && (
-                <Button variant="text" color="inherit" onClick={resetAll}>
-                  Nova tradução
-                </Button>
-              )}
-            </Stack>
-          </Stack>
-        </CardContent>
-        <CardActions />
-      </Card>
-
-      {/* Card de Resultado */}
-      {hasResult && (
-        <Card>
-          <CardHeader
-            title={isPdfResult ? "Pré-visualização do PDF" : "Arquivo traduzido"}
-            subheader={translatedFilename || "arquivo"}
-          />
-          <CardContent sx={{ p: 0 }}>
-            {isPdfResult ? (
-              <Box
-                component="iframe"
-                src={previewUrl!}
-                title="Pré-visualização do PDF"
-                sx={{
-                  display: "block",
-                  width: "100%",
-                  height: { xs: "65vh", md: "75vh" },
-                  border: 0,
-                  bgcolor: "background.default",
+            {file && (
+              <Chip
+                variant="outlined"
+                label={`Selecionado: ${file.name}`}
+                onDelete={() => {
+                  setFile(null);
+                  setStatus("idle");
                 }}
               />
-            ) : (
-              <Box sx={{ p: 2 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  O arquivo foi traduzido com sucesso. Clique em <strong>Baixar</strong> para salvar em seu dispositivo.
-                </Typography>
-                <Chip label={translatedFilename} />
-              </Box>
             )}
-          </CardContent>
-          <CardActions sx={{ justifyContent: "flex-end", gap: 1.5 }}>
-            {isPdfResult && (
-              <Button variant="outlined" onClick={handleOpenInNewTab}>
-                Abrir em nova aba
+          </Stack>
+
+          <Divider />
+
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            <Button
+              variant="contained"
+              onClick={handleTranslate}
+              disabled={disabledTranslate}
+            >
+              {status === "translating" ? "Traduzindo..." : "Traduzir"}
+            </Button>
+
+            {hasResult && (
+              <Button variant="text" color="inherit" onClick={resetAll}>
+                Nova tradução
               </Button>
             )}
-            <Button variant="contained" color="success" onClick={handleDownloadResult}>
-              Baixar
-            </Button>
-            <Button variant="contained" color="error" onClick={resetAll}>
-              Fechar
-            </Button>
-          </CardActions>
-        </Card>
+          </Stack>
+        </Stack>
+      </Paper>
+
+      {/* QUADRO 2: Resultado (PDF com preview OU arquivo comum) */}
+      {hasResult && (
+        <Paper
+          variant="outlined"
+          sx={{
+            mt: 3,
+            borderColor: "divider",
+            borderRadius: 2,
+            overflow: "hidden",
+            backgroundColor: "background.paper",
+          }}
+        >
+          {/* Barra superior */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1,
+              p: 1.5,
+              borderBottom: 1,
+              borderColor: "divider",
+              bgcolor: "action.hover",
+            }}
+          >
+            <Typography fontWeight={600} noWrap>
+              {isPdfResult ? "Pré-visualização" : "Arquivo traduzido"}: {translatedFilename || "arquivo"}
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              {isPdfResult && (
+                <Button variant="outlined" onClick={handleOpenInNewTab}>
+                  Abrir em nova aba
+                </Button>
+              )}
+              <Button variant="contained" color="success" onClick={handleDownloadResult}>
+                Baixar
+              </Button>
+              <Button variant="contained" color="error" onClick={resetAll}>
+                Fechar
+              </Button>
+            </Stack>
+          </Box>
+
+          {/* Corpo: iframe para PDF, ou só uma área com instrução para outros tipos */}
+          {isPdfResult ? (
+            <Box
+              component="iframe"
+              src={previewUrl!}
+              title="Pré-visualização do PDF"
+              sx={{
+                display: "block",
+                width: "100%",
+                height: { xs: "65vh", md: "75vh" },
+                border: 0,
+                bgcolor: "background.default",
+              }}
+            />
+          ) : (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                O arquivo foi traduzido com sucesso. Clique em <strong>Baixar</strong> para salvar em seu dispositivo.
+              </Typography>
+              <Chip label={translatedFilename} />
+              <Box sx={{ mt: 2 }}>
+                <Button variant="contained" color="success" onClick={handleDownloadResult}>
+                  Baixar arquivo traduzido
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </Paper>
+        
       )}
-    </Stack>
+    </Box>
+    
   );
 }

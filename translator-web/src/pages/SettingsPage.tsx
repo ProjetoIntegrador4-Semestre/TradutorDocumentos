@@ -1,4 +1,3 @@
-// src/pages/SettingsPage.tsx
 import React from "react";
 import {
   Stack,
@@ -11,21 +10,15 @@ import {
   Alert,
   Avatar,
   Box,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
   FormControlLabel,
   Switch,
   Divider,
   Chip,
   Typography,
 } from "@mui/material";
-import type { SelectChangeEvent } from "@mui/material/Select";
-import { getMe, type MeDTO, getLanguages } from "../services/api";
+import { getMe, type MeDTO,} from "../services/api";
 
 type ThemeMode = "system" | "light" | "dark";
-type Lang = { code: string; name: string };
 
 type Prefs = {
   theme: ThemeMode;
@@ -71,10 +64,7 @@ export default function SettingsPage() {
   const [savingPrefs, setSavingPrefs] = React.useState(false);
   const [prefsMsg, setPrefsMsg] = React.useState<string | null>(null);
 
-  // Idiomas (para defaultTargetLang)
-  const [langs, setLangs] = React.useState<Lang[]>([]);
-  const [langsLoading, setLangsLoading] = React.useState(false);
-
+ 
   React.useEffect(() => {
     let mounted = true;
     (async () => {
@@ -88,17 +78,6 @@ export default function SettingsPage() {
         setEmail(String(user.email || ""));
       } catch {
         // ignore
-      }
-    })();
-
-    (async () => {
-      setLangsLoading(true);
-      try {
-        const list = await getLanguages();
-        if (!mounted) return;
-        setLangs(list);
-      } finally {
-        if (mounted) setLangsLoading(false);
       }
     })();
 
