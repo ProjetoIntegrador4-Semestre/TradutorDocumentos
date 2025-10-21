@@ -1,15 +1,33 @@
+// src/components/ProtectedRoute.tsx
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import type { RoleString } from "../services/api";
 
-export default function ProtectedRoute({ children }: { children: React.ReactElement }) {
-  const [ready, setReady] = React.useState(false);
-  const [authed, setAuthed] = React.useState(false);
+type Props = {
+  children: React.ReactNode;
+  fallbackPath?: string;            // para onde mandar se não autenticado
+  requireRole?: Extract<RoleString, "user" | "admin">; // role requerida, ex.: "admin"
+};
 
-  React.useEffect(() => {
-    setAuthed(!!localStorage.getItem("access_token"));
-    setReady(true);
-  }, []);
+export default function ProtectedRoute({
+  children,
+  fallbackPath = "/login",
+  requireRole,
+}: Props) {
+  const { user, isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
-  if (!ready) return null;
-  return authed ? children : <Navigate to="/login" replace />;
+  if (loading) return null; // ou um spinner se preferir
+
+  if (!isAuthenticated) {
+    return <Navigate to={fallbackPath} replace state={{ from: location }} />;
+  }
+
+  if (requireRole && String(user?.role || "").toLowerCase() !== requireRole) {
+    // autenticado mas não tem a role — redireciona para página padrão do app
+    return <Navigate to="/tradutor" replace />;
+  }
+
+  return <>{children}</>;
 }

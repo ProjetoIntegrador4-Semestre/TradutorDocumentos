@@ -99,6 +99,8 @@ public class WebSecurityConfig {
                     "/swagger-resources", "/swagger-resources/**"
                 ).permitAll()
 
+                .requestMatchers("/api/admin/**").hasAuthority("admin")
+
                 // Exemplos protegidos
                 .requestMatchers("/api/test/admin").hasAuthority("admin")
                 .requestMatchers("/api/test/user").hasAuthority("user")

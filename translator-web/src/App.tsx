@@ -10,6 +10,8 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SettingsPage from "./pages/SettingsPage";
 import HistoryPage from "./pages/HistoryPage";
 
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+
 export default function App() {
   return (
     <Routes>
@@ -47,6 +49,17 @@ export default function App() {
           <ProtectedRoute>
             <AppShell>
               <SettingsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requireRole="admin">
+            <AppShell>
+              <AdminUsersPage />
             </AppShell>
           </ProtectedRoute>
         }
