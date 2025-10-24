@@ -9,6 +9,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SettingsPage from "./pages/SettingsPage";
 import HistoryPage from "./pages/HistoryPage";
+import FoldersPage from "./pages/FoldersPage";
 
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 
@@ -27,6 +28,17 @@ export default function App() {
           <ProtectedRoute>
             <AppShell>
               <TranslatorPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/arquivos"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <FoldersPage />
             </AppShell>
           </ProtectedRoute>
         }

@@ -1,4 +1,3 @@
-// src/components/layout/Sidebar.tsx
 import React from "react";
 import {
   List, ListItemButton, ListItemIcon, ListItemText, Box, Divider, Button,

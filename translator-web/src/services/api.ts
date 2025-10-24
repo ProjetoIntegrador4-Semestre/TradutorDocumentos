@@ -1,4 +1,3 @@
-// src/services/api.ts
 import axios, { AxiosError } from "axios";
 
 /** ====== BASE / ENDPOINTS ====== */
@@ -13,7 +12,7 @@ export const ENDPOINTS = {
   login: "/api/auth/signin",
   register: "/api/auth/signup",
 
-  // Endpoints públicos (sem /api no seu backend)
+  // Endpoints públicos 
   translate: "/translate-file",
   languages: "/languages",
   records: "/records",
