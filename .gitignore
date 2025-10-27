@@ -38,3 +38,5 @@ application.properties
 *.iml
 
 settings.json
+
+hs_err_pid17016.log
