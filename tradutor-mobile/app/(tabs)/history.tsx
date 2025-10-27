@@ -1,173 +1,310 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, FlatList, Platform, Modal, Pressable, StyleSheet } from "react-native";
-import TopGreeting from "../../components/TopGreeting";
-import { Picker } from "@react-native-picker/picker";
-import { Ionicons } from "@expo/vector-icons";
+// app/(tabs)/history.tsx
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, Platform, ActivityIndicator, FlatList } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
-import { useTranslation } from "react-i18next";
+import { apiFetch, BASE_URL } from "../../lib/api";
+import * as WebBrowser from "expo-web-browser";
+import { useFocusEffect } from "expo-router";
 
-type Rec = { id: number; original_filename: string; file_type: string; created_at: string };
-type SortBy = "recent" | "oldest";
+type RecordItem = {
+  id: string | number;
+  name: string;
+  type?: string;
+  targetLang?: string;
+  createdAt?: string;
+  url?: string;
+};
 
-const TYPES = [
-  { label: "Selecione o tipo", value: null },
-  { label: "DOCX", value: "DOCX" },
-  { label: "PPTX", value: "PPTX" },
-  { label: "PDF",  value: "PDF"  },
+const TYPE_OPTIONS = [
+  { key: "all",  label: "Todos" },
+  { key: "pdf",  label: "PDF" },
+  { key: "docx", label: "DOCX" },
+  { key: "pptx", label: "PPTX" },
+  { key: "txt",  label: "TXT" },
 ];
 
-function TypeSelect({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
-  const [open, setOpen] = useState(false);
-  const { theme } = useTheme();
-  const { t } = useTranslation();
+// --- helpers de normalização -----------------------------------------------
 
-  if (Platform.OS !== "web") {
-    return (
-      <Picker selectedValue={value} onValueChange={(v) => onChange(v)}>
-        {TYPES.map(opt => <Picker.Item key={String(opt.value)} label={opt.label} value={opt.value} />)}
-      </Picker>
-    );
+function basenameFromUrl(u?: string): string | undefined {
+  if (!u) return;
+  try {
+    const noHash = u.split("#")[0];
+    const noQuery = noHash.split("?")[0];
+    const segs = noQuery.split("/");
+    const last = segs[segs.length - 1];
+    if (!last) return;
+    return decodeURIComponent(last);
+  } catch {
+    return;
   }
-
-  const currentLabel = TYPES.find(t => t.value === value)?.label ?? "Selecione o tipo";
-
-  return (
-    <>
-      <TouchableOpacity style={[styles.selectBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]} onPress={() => setOpen(true)}>
-        <Text style={{ color: theme.colors.text }}>{currentLabel}</Text>
-        <Ionicons name="chevron-down" size={18} color={theme.colors.muted} />
-      </TouchableOpacity>
-
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
-          <View style={[styles.menu, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-            {TYPES.map((opt, idx) => (
-              <TouchableOpacity
-                key={String(opt.value)}
-                style={[styles.menuItem, idx !== TYPES.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.colors.border }]}
-                onPress={() => { onChange(opt.value as any); setOpen(false); }}
-              >
-                <Text style={{ color: theme.colors.text }}>{opt.label}</Text>
-                {opt.value === value && <Ionicons name="checkmark" size={18} color={theme.colors.primary} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
-    </>
-  );
 }
 
-export default function History() {
-  const [type, setType] = useState<string | null>(null);
-  const [q, setQ] = useState("");
-  const [sortBy, setSortBy] = useState<SortBy>("recent");
-  const [items, setItems] = useState<Rec[]>([]);
-  const { theme } = useTheme();
-  const { t } = useTranslation();
+function extFromName(n?: string): string | undefined {
+  if (!n) return;
+  const m = n.match(/\.([a-z0-9]+)$/i);
+  return m?.[1]?.toLowerCase();
+}
 
-  useEffect(() => {
-    const now = Date.now();
-    setItems([
-      { id: 1, original_filename: "Arquivo 1.docx", file_type: "DOCX", created_at: new Date(now - 1 * 864e5).toISOString() },
-      { id: 2, original_filename: "Slides.pptx",     file_type: "PPTX", created_at: new Date(now - 3 * 864e5).toISOString() },
-      { id: 3, original_filename: "Contrato.pdf",    file_type: "PDF",  created_at: new Date(now - 7 * 864e5).toISOString() },
-    ]);
+function coalesceName(r: any): string {
+  // tenta vários campos comuns
+  const candidates = [
+    r?.name, r?.filename, r?.fileName, r?.originalName, r?.originalname,
+    r?.original_filename, r?.original_file_name, r?.originName, r?.sourceName,
+    r?.baseName, r?.displayName,
+  ].filter(Boolean);
+
+  let n = (candidates[0] as string | undefined)?.toString();
+  if (!n || n.toLowerCase() === "arquivo") {
+    // tenta extrair da URL
+    n = basenameFromUrl(r?.url) ?? basenameFromUrl(r?.downloadUrl);
+  }
+  // último fallback: id com extensão
+  if (!n) {
+    const t = (r?.type ?? r?.ext)?.toString()?.toLowerCase();
+    n = r?.id ? `arquivo_${r.id}${t ? "." + t : ""}` : "arquivo";
+  }
+  return n;
+}
+
+export default function HistoryScreen() {
+  const { theme } = useTheme();
+
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<RecordItem[]>([]);
+  const [query, setQuery] = useState("");
+  const [type, setType] = useState<"all" | "pdf" | "docx" | "pptx" | "txt">("all");
+  const [order, setOrder] = useState<"desc" | "asc">("desc");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiFetch("/records");
+
+      const normalized: RecordItem[] = (Array.isArray(data) ? data : []).map((r: any, idx: number) => {
+        const name = coalesceName(r);
+        // tipo: usa backend ou deduz pela extensão
+        const type =
+          (r?.type ?? r?.ext)?.toString()?.toLowerCase() ||
+          extFromName(name) ||
+          undefined;
+
+        return {
+          id: r?.id ?? idx,
+          name,
+          type,
+          targetLang: (r?.targetLang ?? r?.toLang ?? r?.langTo ?? "").toString().toUpperCase() || undefined,
+          createdAt: r?.createdAt ?? r?.created_at ?? r?.date ?? undefined,
+          url: r?.url ?? r?.downloadUrl ?? (r?.id ? `${BASE_URL}/records/${r.id}/download` : undefined),
+        };
+      });
+
+      setItems(normalized);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const data = useMemo(() => {
-    const f = items.filter(i =>
-      (!type || i.file_type === type) &&
-      (!q || i.original_filename.toLowerCase().includes(q.toLowerCase()))
-    );
-    return f.sort((a, b) => (sortBy === "recent"
-      ? +new Date(b.created_at) - +new Date(a.created_at)
-      : +new Date(a.created_at) - +new Date(b.created_at)));
-  }, [items, type, q, sortBy]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  function remove(id: number) { setItems(p => p.filter(x => x.id !== id)); }
+  useEffect(() => {
+    let ticks = 0;
+    const id = setInterval(() => {
+      ticks += 1;
+      if (ticks > 5) { clearInterval(id); return; }
+      load();
+    }, 2000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  const filtered = useMemo(() => {
+    let list = items.slice();
+    const q = query.trim().toLowerCase();
+
+    if (q) {
+      list = list.filter(it =>
+        it.name?.toLowerCase().includes(q) ||
+        it.targetLang?.toLowerCase().includes(q)
+      );
+    }
+    if (type !== "all") {
+      list = list.filter(it => (it.type || "").toLowerCase() === type);
+    }
+    list.sort((a, b) => {
+      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return order === "desc" ? (db - da) : (da - db);
+    });
+    return list;
+  }, [items, query, type, order]);
+
+  function openItem(it: RecordItem) {
+    const href = it.url ?? "#";
+    if (Platform.OS === "web") window.open(href, "_blank");
+    else WebBrowser.openBrowserAsync(href);
+  }
+
+  const Empty = (
+    <View style={{ paddingVertical: 40, alignItems: "center" }}>
+      <Text style={{ color: theme.colors.muted }}>Nenhuma tradução encontrada.</Text>
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
-      <TopGreeting />
+      <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
+        <Text style={{ color: theme.colors.text, fontSize: 20, fontWeight: "700" }}>Histórico</Text>
 
-      <View style={{ padding: 16, rowGap: 12 }}>
-        <View style={[styles.headerChip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={{ color: theme.colors.text, fontWeight: "700" }}>{t("history.title")}</Text>
-        </View>
+        <View style={{ marginTop: 12 }}>
+          <TextInput
+            placeholder="Filtrar por nome ou idioma..."
+            placeholderTextColor={theme.colors.muted}
+            value={query}
+            onChangeText={setQuery}
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.surface,
+              color: theme.colors.text,
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              marginBottom: 10,
+            }}
+          />
 
-        {/* FILTROS */}
-        <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={{ marginBottom: 6, color: theme.colors.text, fontWeight: "600" }}>{t("history.filters")}</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+            {TYPE_OPTIONS.map(opt => {
+              const active = type === (opt.key as any);
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  onPress={() => setType(opt.key as any)}
+                  style={{
+                    paddingVertical: 6,
+                    paddingHorizontal: 10,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: active ? theme.colors.primary : theme.colors.border,
+                    backgroundColor: active ? "#EEF2FF" : theme.colors.surface,
+                  }}
+                >
+                  <Text style={{ color: active ? theme.colors.primary : theme.colors.text }}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity
+              onPress={() => setOrder(p => (p === "desc" ? "asc" : "desc"))}
+              style={{
+                paddingVertical: 6,
+                paddingHorizontal: 10,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.surface,
+              }}
+            >
+              <Text style={{ color: theme.colors.text }}>
+                {order === "desc" ? "Mais recentes" : "Mais antigas"}
+              </Text>
+            </TouchableOpacity>
 
-          <TypeSelect value={type} onChange={setType} />
-
-          <View style={{ flexDirection: "row", columnGap: 8, marginTop: 8 }}>
-            <TextInput
-              placeholder={t("history.keyword")}
-              value={q}
-              onChangeText={setQ}
-              placeholderTextColor={theme.colors.muted}
-              style={[styles.input, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, color: theme.colors.text }]}
-            />
-            <TouchableOpacity style={[styles.searchBtn, { backgroundColor: theme.colors.primary }]}>
-              <Text style={{ color: theme.colors.primaryText }}>🔍</Text>
+            <TouchableOpacity
+              onPress={load}
+              style={{
+                marginLeft: 8,
+                paddingVertical: 6,
+                paddingHorizontal: 10,
+                borderRadius: 8,
+                backgroundColor: theme.colors.primary,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "600" }}>Atualizar</Text>
             </TouchableOpacity>
           </View>
-
-          {/* ORDENAR */}
-          <View style={{ flexDirection: "row", columnGap: 8, marginTop: 8 }}>
-            <TouchableOpacity
-              onPress={() => setSortBy("recent")}
-              style={[styles.chip, { borderColor: sortBy === "recent" ? theme.colors.primary : theme.colors.border, backgroundColor: theme.colors.surface }]}
-            >
-              <Text style={{ color: sortBy === "recent" ? theme.colors.primary : theme.colors.muted, fontWeight: "600" }}>{t("history.newest")}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setSortBy("oldest")}
-              style={[styles.chip, { borderColor: sortBy === "oldest" ? theme.colors.primary : theme.colors.border, backgroundColor: theme.colors.surface }]}
-            >
-              <Text style={{ color: sortBy === "oldest" ? theme.colors.primary : theme.colors.muted, fontWeight: "600" }}>{t("history.oldest")}</Text>
-            </TouchableOpacity>
-          </View>
         </View>
+      </View>
 
-        {/* LISTA */}
+      {loading && items.length === 0 ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator />
+        </View>
+      ) : (
         <FlatList
-          data={data}
-          keyExtractor={(i) => String(i.id)}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          data={filtered}
+          keyExtractor={(it) => String(it.id)}
+          ListEmptyComponent={Empty}
+          contentContainerStyle={{ padding: 16, paddingTop: 8 }}
           renderItem={({ item }) => (
-            <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
-              <View>
-                <Text style={{ color: theme.colors.text, fontWeight: "700" }}>
-                  {new Date(item.created_at).toLocaleDateString()}
-                </Text>
-                <Text style={{ color: theme.colors.muted }}>
-                  {item.original_filename} • {item.file_type}
-                </Text>
+            <View
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderRadius: 12,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                marginBottom: 12,
+              }}
+            >
+              <Text style={{ color: theme.colors.text, fontWeight: "600" }} numberOfLines={1}>
+                {item.name}
+              </Text>
+
+              <View style={{ flexDirection: "row", gap: 12, marginTop: 6 }}>
+                {!!item.type && (
+                  <Text style={{ color: theme.colors.muted, fontSize: 12 }}>
+                    Tipo: {item.type.toUpperCase()}
+                  </Text>
+                )}
+                {!!item.targetLang && (
+                  <Text style={{ color: theme.colors.muted, fontSize: 12 }}>
+                    Para: {item.targetLang}
+                  </Text>
+                )}
+                {!!item.createdAt && (
+                  <Text style={{ color: theme.colors.muted, fontSize: 12 }}>
+                    {new Date(item.createdAt).toLocaleString()}
+                  </Text>
+                )}
               </View>
-              <TouchableOpacity onPress={() => remove(item.id)} style={styles.deleteBtn}>
-                <Text style={{ color: "#fff", fontWeight: "700" }}>{t("history.delete")}</Text>
-              </TouchableOpacity>
+
+              <View style={{ marginTop: 10, flexDirection: "row" }}>
+                {Platform.OS === "web" ? (
+                  <a
+                    href={item.url ?? "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      textDecoration: "none",
+                      backgroundColor: theme.colors.primary,
+                      color: "#fff",
+                      padding: 8,
+                      borderRadius: 8,
+                      fontWeight: 600 as any,
+                    }}
+                  >
+                    Abrir
+                  </a>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => openItem(item)}
+                    style={{
+                      backgroundColor: theme.colors.primary,
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "600" }}>Abrir</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           )}
         />
-      </View>
+      )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { borderRadius: 12, borderWidth: 1, padding: 12 },
-  headerChip: { alignSelf: "center", borderRadius: 999, paddingVertical: 6, paddingHorizontal: 18, borderWidth: 1 },
-  input: { flex: 1, borderWidth: 1, borderRadius: 12, padding: 10 },
-  searchBtn: { borderRadius: 12, paddingHorizontal: 12, justifyContent: "center" },
-  chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
-  selectBtn: { height: 44, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.25)", justifyContent: "center", alignItems: "center", padding: 16 },
-  menu: { width: 260, borderRadius: 12, borderWidth: 1, overflow: "hidden" },
-  menuItem: { paddingVertical: 12, paddingHorizontal: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  deleteBtn: { backgroundColor: "#EF4444", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
-});

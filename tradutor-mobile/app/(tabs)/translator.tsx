@@ -6,6 +6,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { translateMany, MAX_MB } from "../../lib/translate";
 import { useRouter } from "expo-router";
 import { BASE_URL } from "../../lib/api";
+import { appEvents } from "../../lib/events";
 
 type UIFile = File | { uri: string; name?: string; mimeType?: string; type?: string; size?: number };
 
@@ -15,10 +16,9 @@ const TARGETS = [
   { code: "es", label: "Espanhol" },
   { code: "fr", label: "Francês" },
   { code: "de", label: "Alemão" },
-  { code: "it", label: "Italiano" }, // ✅ adicionado
+  { code: "it", label: "Italiano" },
 ];
 
-// Constrói um link de download quando possível
 function normalizeDownloadUrl(data: any): string | null {
   const direct =
     data?.downloadUrl ??
@@ -53,7 +53,6 @@ export default function TranslatorScreen() {
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [results, setResults] = useState<{ name: string; ok: boolean; url?: string | null; error?: string }[]>([]);
 
-  // Web input hidden
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   function fileName(f: UIFile) {
@@ -127,6 +126,9 @@ export default function TranslatorScreen() {
       }));
       setResults(ui);
 
+      // 👇 avisa o Histórico pra recarregar
+      appEvents.emit("history:refresh");
+
       const oks = resultsRaw.filter((r) => r.ok).length;
       const fails = resultsRaw.length - oks;
       Alert.alert("Concluído", `${oks} arquivo(s) traduzido(s), ${fails} erro(s).`);
@@ -137,7 +139,6 @@ export default function TranslatorScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.bg, padding: 16 }}>
-      {/* input web escondido (múltiplos) */}
       {Platform.OS === "web" && (
         <input
           ref={inputRef as any}
@@ -181,7 +182,6 @@ export default function TranslatorScreen() {
         })}
       </View>
 
-      {/* Lista de arquivos */}
       <View
         style={{
           backgroundColor: theme.colors.surface,
@@ -248,7 +248,6 @@ export default function TranslatorScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Enviar */}
       <TouchableOpacity
         onPress={onTranslate}
         disabled={loading || files.length === 0}
@@ -270,7 +269,6 @@ export default function TranslatorScreen() {
         )}
       </TouchableOpacity>
 
-      {/* Resultados */}
       {results.length > 0 && (
         <View
           style={{
@@ -317,10 +315,7 @@ export default function TranslatorScreen() {
             </View>
           ))}
 
-          <TouchableOpacity
-            onPress={() => setResults([])}
-            style={{ marginTop: 10, alignSelf: "flex-end" }}
-          >
+          <TouchableOpacity onPress={() => setResults([])} style={{ marginTop: 10, alignSelf: "flex-end" }}>
             <Text style={{ color: theme.colors.muted }}>Limpar lista</Text>
           </TouchableOpacity>
         </View>
