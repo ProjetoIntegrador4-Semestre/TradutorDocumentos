@@ -53,6 +53,7 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       APP_OAUTH2_REDIRECT_URI: http://localhost:5173/oauth/callback
+      JWT_SECRET: IntrMvLCt0wNl8AhgqtP017Y5vkvh4WgfLfsULHhN2MFAhjWcbKD5BXikOF7mf85
 
     volumes:
       - ../data:/app/data
