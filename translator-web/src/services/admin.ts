@@ -1,18 +1,21 @@
 import { api } from "./api";
 import type { RoleString, Paged } from "./api";
 
+/* ============================
+   Tipos
+   ============================ */
 export interface AdminUserDTO {
   id: number | string;
   username: string;
   email: string;
-  role: RoleString; 
+  role: RoleString;      // "user" | "admin"
   enabled: boolean;
 }
 
 export interface AdminUserQuery {
-  page?: number;        
-  size?: number;        
-  q?: string;           
+  page?: number;
+  size?: number;
+  q?: string;
   role?: "user" | "admin";
   enabled?: boolean;
 }
@@ -26,10 +29,15 @@ export interface AdminRecordDTO {
   fileType?: string;
   sizeBytes?: number;
   status?: string;
-  createdAt?: string;
+  createdAt?: string | number;
   downloadUrl?: string;
 }
 
+export type AdminUserPatch = Partial<Pick<AdminUserDTO, "username" | "role" | "enabled">>;
+
+/* ============================
+   Helpers
+   ============================ */
 function mapRecordItem(serverItem: any): AdminRecordDTO {
   return {
     id: serverItem.id ?? serverItem.recordId ?? serverItem.uuid ?? serverItem._id,
@@ -49,6 +57,20 @@ function mapRecordItem(serverItem: any): AdminRecordDTO {
   };
 }
 
+function extractError(e: any): { status?: number; message: string } {
+  const status = e?.response?.status;
+  const data = e?.response?.data;
+  const msg =
+    data?.error ||
+    data?.message ||
+    e?.message ||
+    "Ocorreu um erro inesperado.";
+  return { status, message: msg };
+}
+
+/* ============================
+   Users
+   ============================ */
 export async function adminListUsers(
   query: AdminUserQuery = {}
 ): Promise<Paged<AdminUserDTO>> {
@@ -61,14 +83,12 @@ export async function adminListUsers(
 
   const url = "/api/admin/users" + (params.toString() ? `?${params.toString()}` : "");
   const r = await api.get(url);
-  const data = r.data;
-
-  return data as Paged<AdminUserDTO>;
+  return r.data as Paged<AdminUserDTO>;
 }
 
 export async function adminUpdateUser(
   id: number | string,
-  patch: Partial<Pick<AdminUserDTO, "username" | "role" | "enabled">>
+  patch: AdminUserPatch
 ): Promise<AdminUserDTO> {
   const r = await api.patch(`/api/admin/users/${id}`, patch, {
     headers: { "Content-Type": "application/json" },
@@ -76,10 +96,37 @@ export async function adminUpdateUser(
   return r.data as AdminUserDTO;
 }
 
-export async function adminDeleteUser(id: number | string): Promise<void> {
-  await api.delete(`/api/admin/users/${id}`);
+/**
+ * Exclui usuário. Se houver vínculos (documentos), o backend retorna 409.
+ * Passe { force: true } para exclusão forçada (?force=true) que apaga os documentos antes.
+ */
+export async function adminDeleteUser(
+  id: number | string,
+  opts: { force?: boolean } = {}
+): Promise<void> {
+  const qs = opts.force ? "?force=true" : "";
+  try {
+    await api.delete(`/api/admin/users/${id}${qs}`);
+  } catch (e: any) {
+    const { status, message } = extractError(e);
+    if (status === 409) {
+      // Conflito de integridade (usuário com documentos vinculados)
+      throw new Error(
+        message || "Usuário possui documentos vinculados. Exclua-os ou use a exclusão forçada."
+      );
+    }
+    throw new Error(message);
+  }
 }
 
+/** Atalho para exclusão forçada */
+export async function adminForceDeleteUser(id: number | string): Promise<void> {
+  return adminDeleteUser(id, { force: true });
+}
+
+/* ============================
+   Registros (documentos) do usuário
+   ============================ */
 export async function adminListUserRecords(
   userId: number | string,
   page = 0,
@@ -118,5 +165,10 @@ export async function adminDeleteUserRecord(
   userId: number | string,
   recordId: number | string
 ): Promise<void> {
-  await api.delete(`/api/admin/users/${userId}/records/${recordId}`);
+  try {
+    await api.delete(`/api/admin/users/${userId}/records/${recordId}`);
+  } catch (e: any) {
+    const { message } = extractError(e);
+    throw new Error(message);
+  }
 }

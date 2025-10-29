@@ -12,12 +12,13 @@ import com.example.backend.entities.TranslationRecord;
 
 public interface TranslationRecordRepository extends JpaRepository<TranslationRecord, Long> {
 
+  @Modifying
+    @Query("delete from TranslationRecord r where r.user.id = :userId")
+    int deleteByUserId(Long userId);
+
   List<TranslationRecord> findAllByUser_IdOrderByCreatedAtDesc(Long userId);
 
-  /**
-   * Exclui um registro apenas se pertencer ao usuário informado.
-   * Retorna a quantidade de linhas afetadas (0 = não achou/não pertence).
-   */
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Transactional
   @Query("delete from TranslationRecord tr where tr.id = :id and tr.user.id = :userId")

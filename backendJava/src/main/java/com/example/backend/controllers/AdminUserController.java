@@ -2,6 +2,7 @@ package com.example.backend.controllers;
 
 import java.util.Map;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -11,29 +12,25 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
 
 import com.example.backend.entities.User;
 import com.example.backend.repositories.UserRepository;
+import com.example.backend.repositories.TranslationRecordRepository;
 import com.example.backend.security.UserDetailsImpl;
-
-import jakarta.transaction.Transactional;
 
 @RestController
 @RequestMapping("/api/admin")
 public class AdminUserController {
 
     private final UserRepository userRepository;
+    private final TranslationRecordRepository recordRepository; // <— novo
 
-    public AdminUserController(UserRepository userRepository) {
+    public AdminUserController(UserRepository userRepository,
+                               TranslationRecordRepository recordRepository) {
         this.userRepository = userRepository;
+        this.recordRepository = recordRepository;
     }
 
     // -------- USUÁRIOS --------
@@ -55,13 +52,12 @@ public class AdminUserController {
             base = userRepository.findAll(pageable);
         }
 
-        // filtros opcionais
         Page<User> filtered = base.map(u -> u);
         if (role != null && !role.isBlank()) {
             filtered = new PageImpl<>(
                 filtered.stream().filter(u -> role.equalsIgnoreCase(u.getRole())).toList(),
                 pageable,
-                filtered.getTotalElements() // nota: para página filtrada em memória, o total pode divergir.
+                filtered.getTotalElements()
             );
         }
         if (enabled != null) {
@@ -91,7 +87,6 @@ public class AdminUserController {
         @AuthenticationPrincipal UserDetailsImpl me
     ) {
         return userRepository.findById(id).map(u -> {
-            // Não se auto-desabilitar nem se auto-demitir de admin sem cuidado
             boolean isSelf = me != null && me.getId() != null && me.getId().equals(u.getId());
 
             if (req.username != null && !req.username.isBlank()) {
@@ -103,7 +98,6 @@ public class AdminUserController {
                     return ResponseEntity.badRequest().body(Map.of("error", "role deve ser 'user' ou 'admin'"));
                 }
                 if (isSelf && !newRole.equalsIgnoreCase(me.getRole())) {
-                    // Evita que o admin se rebaixe a 'user' por engano
                     return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Não é permitido alterar sua própria role nesta operação."));
                 }
@@ -125,34 +119,32 @@ public class AdminUserController {
     @Transactional
     public ResponseEntity<?> deleteUser(
         @PathVariable Long id,
-        @AuthenticationPrincipal UserDetailsImpl me
+        @AuthenticationPrincipal UserDetailsImpl me,
+        @RequestParam(name = "force", defaultValue = "false") boolean force
     ) {
         if (me != null && me.getId() != null && me.getId().equals(id)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("error", "Você não pode excluir sua própria conta."));
         }
         try {
+            if (force) {
+                // apaga documentos/regs do usuário antes
+                recordRepository.deleteByUserId(id);
+            }
             userRepository.deleteById(id);
+            userRepository.flush(); // força o commit agora para capturar violação de integridade aqui
             return ResponseEntity.noContent().build();
         } catch (EmptyResultDataAccessException ex) {
             return ResponseEntity.notFound().build();
+        } catch (DataIntegrityViolationException ex) {
+            // ainda há vínculos; informe 409 (mais amigável que 500)
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                    "error", "Usuário possui documentos/itens vinculados.",
+                    "hint", "Exclua os documentos primeiro ou chame DELETE com ?force=true"
+                ));
         }
     }
-
-    // -------- DOCUMENTOS (GANCHO) --------
-    // Se você JÁ tem entidade/serviço de "registros de tradução",
-    // implemente aqui endpoints que filtram por userId.
-    // Exemplo (ajuste nomes se sua entidade/service tiver outro nome):
-    //
-    // @GetMapping("/users/{id}/records")
-    // public Page<TranslationRecordDTO> recordsByUser(
-    //     @PathVariable Long id,
-    //     @RequestParam(defaultValue="0") int page,
-    //     @RequestParam(defaultValue="20") int size
-    // ) { ... }
-    //
-    // @DeleteMapping("/users/{id}/records/{recordId}")
-    // public ResponseEntity<?> deleteRecord(@PathVariable Long id, @PathVariable Long recordId) { ... }
 
     // ====== DTOs ======
     public static class UserDTO {
