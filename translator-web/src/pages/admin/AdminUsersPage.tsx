@@ -11,7 +11,6 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Button,
   Chip,
   Typography,
   Table,
@@ -41,6 +40,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 import FolderIcon from "@mui/icons-material/Folder";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import Button from "@mui/material/Button";
 import type { Paged, RoleString } from "../../services/api";
 import {
   adminListUsers,
@@ -143,9 +143,9 @@ export default function AdminUsersPage() {
       setPaged((p) =>
         p
           ? {
-              ...p,
-              content: p.content.map((u) => (u.id === id ? { ...u, ...updated } : u)),
-            }
+            ...p,
+            content: p.content.map((u) => (u.id === id ? { ...u, ...updated } : u)),
+          }
           : p
       );
       setDirty((d) => {
@@ -164,10 +164,10 @@ export default function AdminUsersPage() {
       setPaged((p) =>
         p
           ? {
-              ...p,
-              content: p.content.filter((u) => u.id !== id),
-              totalElements: Math.max(0, p.totalElements - 1),
-            }
+            ...p,
+            content: p.content.filter((u) => u.id !== id),
+            totalElements: Math.max(0, p.totalElements - 1),
+          }
           : p
       );
       setSnack({ open: true, msg: "Usuário excluído.", severity: "success" });
@@ -203,10 +203,10 @@ export default function AdminUsersPage() {
       setRecPaged((p) =>
         p
           ? {
-              ...p,
-              content: p.content.filter((r) => r.id !== recId),
-              totalElements: Math.max(0, p.totalElements - 1),
-            }
+            ...p,
+            content: p.content.filter((r) => r.id !== recId),
+            totalElements: Math.max(0, p.totalElements - 1),
+          }
           : p
       );
       setSnack({ open: true, msg: "Documento excluído.", severity: "success" });
@@ -262,7 +262,21 @@ export default function AdminUsersPage() {
               </Select>
             </FormControl>
 
-            <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchUsers}>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchUsers}
+              size="medium"
+              sx={{
+                minWidth: 110,          
+                px: 2,                  
+                py: 0.75,               
+                lineHeight: 1.25,       
+                borderRadius: 2,        
+                whiteSpace: "nowrap",   
+                ".MuiButton-startIcon": { mr: 0.75 }
+              }}
+            >
               Atualizar
             </Button>
             <Button variant="outlined" onClick={resetFilters}>Limpar</Button>
