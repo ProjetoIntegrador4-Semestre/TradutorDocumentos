@@ -1,35 +1,79 @@
 // components/GoogleButton.tsx
 import React from "react";
-import { TouchableOpacity, View, Text, Image } from "react-native";
+import {
+  Platform,
+  TouchableOpacity,
+  Text,
+  Linking,
+  View,
+  Image,
+} from "react-native";
+import { BASE_URL } from "../lib/api";
+
+type Props = {
+  title?: string;
+};
 
 export default function GoogleButton({
-  onPress,
-  title = "LOGIN COM GOOGLE",
-}: {
-  onPress?: () => void;
-  title?: string;
-}) {
+  title = "Entrar com Google",
+}: Props) {
+  const onPress = () => {
+    const authUrl = `${BASE_URL}/oauth2/authorization/google`;
+
+    if (Platform.OS === "web") {
+      // abre o fluxo de login NA MESMA ABA
+      window.location.href = authUrl;
+    } else {
+      // mobile: abre no navegador
+      Linking.openURL(authUrl);
+    }
+  };
+
   return (
     <TouchableOpacity
       onPress={onPress}
-      activeOpacity={0.85}
+      activeOpacity={0.9}
       style={{
-        borderWidth: 1,
-        borderColor: "#ddd",
-        backgroundColor: "#fff",
-        paddingVertical: 12,
         borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#dadce0",
+        backgroundColor: "#ffffff",
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        alignSelf: "stretch",
         alignItems: "center",
-        flexDirection: "row",
         justifyContent: "center",
-        gap: 8,
+        marginTop: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+        elevation: 2,
       }}
     >
-      <Image
-        source={{ uri: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" }}
-        style={{ width: 18, height: 18 }}
-      />
-      <Text style={{ fontWeight: "700", color: "#333" }}>{title}</Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Image
+          source={{
+            uri: "https://img.icons8.com/color/48/google-logo.png",
+          }}
+          style={{ width: 18, height: 18, marginRight: 8 }}
+        />
+        <Text
+          style={{
+            color: "#3c4043",
+            fontWeight: "600",
+            fontSize: 14,
+          }}
+        >
+          {title}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }

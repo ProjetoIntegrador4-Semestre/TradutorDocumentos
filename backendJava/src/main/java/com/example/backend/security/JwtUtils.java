@@ -1,6 +1,8 @@
 package com.example.backend.security;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.crypto.SecretKey;
 
@@ -25,16 +27,41 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    // 🔹 Gerar token com id, username, email e role (apenas 1 agora)
+    /**
+     * Overload padrão: mantém compatibilidade.
+     * Continua usando o "username" do UserDetailsImpl (geralmente e-mail em muitos apps).
+     */
     public String generateJwtToken(UserDetailsImpl userPrincipal) {
+        return generateJwtToken(userPrincipal, userPrincipal.getUsername());
+    }
+
+    /**
+     * Overload preferido: recebe um displayName (ex.: "Bruno Sakamoto (Sakamoto)")
+     * e grava em 'username' e 'name' no JWT.
+     */
+    public String generateJwtToken(UserDetailsImpl userPrincipal, String displayName) {
+        final String subjectEmail = userPrincipal.getEmail();
+
+        // Normaliza o displayName (fallback seguro)
+        String prettyName = (displayName != null && !displayName.isBlank())
+                ? displayName
+                : userPrincipal.getUsername(); // último recurso
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("id", userPrincipal.getId());
+        claims.put("email", subjectEmail);
+        claims.put("role", userPrincipal.getRole()); // "user" | "admin"
+        claims.put("username", prettyName);          // ⬅️ o nome “bonito” vai aqui
+        claims.put("name", prettyName);              // ⬅️ duplica em 'name' (front prioriza se existir)
+
+        Date now = new Date();
+        Date exp = new Date(now.getTime() + jwtExpirationMs);
+
         return Jwts.builder()
-                .subject(userPrincipal.getEmail()) // subject = email
-                .claim("id", userPrincipal.getId())
-                .claim("username", userPrincipal.getUsername())
-                .claim("email", userPrincipal.getEmail())
-                .claim("role", userPrincipal.getRole()) // agora apenas 1 role
-                .issuedAt(new Date())
-                .expiration(new Date(new Date().getTime() + jwtExpirationMs))
+                .setClaims(claims)
+                .setSubject(subjectEmail)     // subject = email (ok manter)
+                .setIssuedAt(now)
+                .setExpiration(exp)
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -48,6 +75,7 @@ public class JwtUtils {
     }
 
     public String getUserNameFromJwtToken(String token) {
+        // mantém compat: lê 'username'; (se quiser, pode ler 'name' e cair para 'username')
         return getAllClaims(token).get("username", String.class);
     }
 

@@ -58,7 +58,8 @@ public class WebSecurityConfig {
         cfg.setAllowedOrigins(List.of(
             "http://localhost:8080",
             "http://localhost:3000",
-            "http://localhost:8081"
+            "http://localhost:8081",
+            "http://localhost:5173"
             // "http://localhost:19006", "http://127.0.0.1:19006" // Expo web, se precisar
         ));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
@@ -98,6 +99,8 @@ public class WebSecurityConfig {
                     "/swagger-resources", "/swagger-resources/**"
                 ).permitAll()
 
+                .requestMatchers("/api/admin/**").hasAuthority("admin")
+
                 // Exemplos protegidos
                 .requestMatchers("/api/test/admin").hasAuthority("admin")
                 .requestMatchers("/api/test/user").hasAuthority("user")
@@ -113,7 +116,7 @@ public class WebSecurityConfig {
             .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             // OAuth2 login (Google)
             .oauth2Login(oauth -> oauth
-                .defaultSuccessUrl("/api/auth/google/success", true) // chama seu controller JSON
+                .successHandler(oAuth2LoginSuccessHandler) // chama seu controller JSON
                 .failureUrl("/oauth2/error")                         // se der ruim, vai pra /oauth2/error
             )
             // Provider de auth (credenciais locais)
