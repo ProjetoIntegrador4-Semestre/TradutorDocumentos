@@ -94,13 +94,6 @@ export default function SignupPage() {
           </button>
         </form>
 
-        <div className="or">ou</div>
-
-        <button className="google-btn" type="button" onClick={() => beginGoogleLogin()}>
-          <img src="/google-logo.png" alt="Google" />
-          Cadastre-se com Google
-        </button>
-
         <div className="foot">
           Já tem conta?{" "}
           <Link className="link" to="/login">
