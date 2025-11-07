@@ -56,6 +56,7 @@
 - [ ] Versão em `/docs/arquitetura/diagrama-classes.mmd` (Mermaid/PlantUML)
 
 ### Exemplo
+```mermaid
 classDiagram
   class User {
     UUID id
