@@ -1,0 +1,58 @@
+name: CI/CD for Frontend
+
+# Aciona o pipeline a cada push na branch de desenvolvimento
+on:
+  push:
+    branches:
+      - feature/integration-back-frontend  # ou qualquer branch que queira monitorar
+  pull_request:
+    branches:
+      - feature/integration-back-frontend  # ou qualquer branch que você usa para PR
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # ou qualquer outra versão que você preferir
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2  # Faz checkout do código
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'  # ou qualquer versão do Node que você esteja utilizando
+
+      - name: Install dependencies
+        run: npm install  # ou 'yarn install' dependendo do gerenciador que você usa
+
+      - name: Run Build
+        run: npm run build  # ou 'yarn build', o script de build do seu projeto
+
+      - name: Run Tests
+        run: npm run test -- --coverage  # rodar testes (ajuste conforme necessário)
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: build
+          path: build  # ou o diretório onde seu build é gerado
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build  # garante que o job de build será executado antes do deploy
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Deploy to Server/Hosting
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Comandos para deploy, exemplo: deploy no GitHub Pages, Firebase, Netlify, etc.
+          # Exemplo de deploy no GitHub Pages:
+          npm install -g gh-pages
+          npm run build
+          gh-pages -d build
+
+      # Outros passos, como notificações, podem ser adicionados aqui
