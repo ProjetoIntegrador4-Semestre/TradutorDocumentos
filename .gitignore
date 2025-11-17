@@ -38,5 +38,4 @@ build/
 
 settings.json
 
-.env
 node_modules
