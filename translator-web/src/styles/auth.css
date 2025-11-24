@@ -197,3 +197,15 @@ body { margin: 0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,san
   .auth-page, .auth-card{ animation: none }
   .auth-page::before, .auth-page::after{ animation: none }
 }
+
+.password-wrapper {
+  position: relative;
+}
+
+.eye-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+}

@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login, beginGoogleLogin, humanizeAuthError } from "../services/api";
+import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Importando ícones do react-icons
 import "../styles/auth.css";
 
 export default function LoginPage() {
@@ -9,6 +10,9 @@ export default function LoginPage() {
   const [senha, setSenha] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [erro, setError] = React.useState<string | null>(null);
+  
+  // Estado para mostrar/esconder a senha
+  const [showSenha, setShowSenha] = React.useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,13 +52,21 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <input
-              type="password"
-              placeholder="Senha"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              required
-            />
+            <div className="password-wrapper">
+              <input
+                type={showSenha ? "text" : "password"} // Alternando entre texto e senha
+                placeholder="Senha"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                required
+              />
+              <div
+                className="eye-icon"
+                onClick={() => setShowSenha(!showSenha)} // Alterna o estado do olho
+              >
+                {showSenha ? <FaEyeSlash /> : <FaEye />}
+              </div>
+            </div>
           </div>
 
           <button className="btn" type="submit" disabled={loading}>
@@ -79,7 +91,6 @@ export default function LoginPage() {
         <div className="foot" style={{ marginTop: 10 }}>
           <Link className="link" to="/esqueci-senha">Esqueceu a senha?</Link>
         </div>
-
       </div>
     </div>
   );

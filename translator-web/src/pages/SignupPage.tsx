@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { register, humanizeSignupError } from "../services/api";
+import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Importando ícones do react-icons
 import "../styles/auth.css";
 
 export default function SignupPage() {
@@ -12,6 +13,10 @@ export default function SignupPage() {
   const [loading, setLoading] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
+  
+  // Estados para mostrar/esconder as senhas
+  const [showSenha, setShowSenha] = React.useState(false);
+  const [showConfirma, setShowConfirma] = React.useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +32,6 @@ export default function SignupPage() {
     try {
       await register(nome, email, senha);
       setOk("Cadastro realizado com sucesso! Faça login para continuar.");
-      // Redireciona para login após alguns segundos — opcional:
       setTimeout(() => nav("/login"), 1200);
     } catch (err: any) {
       setErro(humanizeSignupError(err));
@@ -70,23 +74,39 @@ export default function SignupPage() {
           </div>
 
           <div className="form-group">
-            <input
-              type="password"
-              placeholder="Senha"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              required
-            />
+            <div className="password-wrapper">
+              <input
+                type={showSenha ? "text" : "password"} // Alternando entre texto e senha
+                placeholder="Senha"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                required
+              />
+              <div
+                className="eye-icon"
+                onClick={() => setShowSenha(!showSenha)} // Alterna o estado do olho
+              >
+                {showSenha ? <FaEyeSlash /> : <FaEye />}
+              </div>
+            </div>
           </div>
 
           <div className="form-group">
-            <input
-              type="password"
-              placeholder="Confirmar senha"
-              value={confirma}
-              onChange={(e) => setConfirma(e.target.value)}
-              required
-            />
+            <div className="password-wrapper">
+              <input
+                type={showConfirma ? "text" : "password"} // Alternando entre texto e senha
+                placeholder="Confirmar senha"
+                value={confirma}
+                onChange={(e) => setConfirma(e.target.value)}
+                required
+              />
+              <div
+                className="eye-icon"
+                onClick={() => setShowConfirma(!showConfirma)} // Alterna o estado do olho
+              >
+                {showConfirma ? <FaEyeSlash /> : <FaEye />}
+              </div>
+            </div>
           </div>
 
           <button className="btn" type="submit" disabled={loading}>
