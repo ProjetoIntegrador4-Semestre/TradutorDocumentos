@@ -9,7 +9,6 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SettingsPage from "./pages/SettingsPage";
 import HistoryPage from "./pages/HistoryPage";
-import FoldersPage from "./pages/FoldersPage";
 
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 
