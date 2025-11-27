@@ -3,7 +3,6 @@ import {
   List, ListItemButton, ListItemIcon, ListItemText, Box, Divider, Button,
 } from "@mui/material";
 import TranslateIcon from "@mui/icons-material/Translate";
-import FolderIcon from "@mui/icons-material/Folder";
 import LogoutIcon from "@mui/icons-material/Logout";
 import HistoryIcon from "@mui/icons-material/History";
 import SettingsIcon from "@mui/icons-material/Settings";
