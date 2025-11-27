@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login, beginGoogleLogin, humanizeAuthError } from "../services/api";
-import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Importando ícones do react-icons
+import { FaEye, FaEyeSlash } from 'react-icons/fa'; 
 import "../styles/auth.css";
 
 export default function LoginPage() {
