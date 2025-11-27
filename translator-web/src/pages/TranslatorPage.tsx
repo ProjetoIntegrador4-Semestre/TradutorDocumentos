@@ -176,7 +176,7 @@ export default function TranslatorPage() {
       )}
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert data-testid="error-message" severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
@@ -261,6 +261,7 @@ export default function TranslatorPage() {
 
             {file && (
               <Chip
+                data-testid="file-chip"
                 variant="outlined"
                 label={`Selecionado: ${file.name}`}
                 onDelete={() => {
@@ -275,6 +276,7 @@ export default function TranslatorPage() {
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
             <Button
+              data-testid="translate-button"
               variant="contained"
               onClick={handleTranslate}
               disabled={disabledTranslate}
@@ -362,9 +364,9 @@ export default function TranslatorPage() {
             </Box>
           )}
         </Paper>
-        
+
       )}
     </Box>
-    
+
   );
 }

@@ -30,7 +30,6 @@ export default function Sidebar() {
     () =>
       [
         { to: "/tradutor", label: "Tradutor", icon: <TranslateIcon /> },
-        { to: "/arquivos", label: "Arquivos", icon: <FolderIcon /> },
         { to: "/historico", label: "Histórico", icon: <HistoryIcon /> },
         // Admin só aparece para quem tem role admin
         ...(isAdmin ? [{ to: "/admin", label: "Admin", icon: <AdminPanelSettingsIcon /> }] : []),

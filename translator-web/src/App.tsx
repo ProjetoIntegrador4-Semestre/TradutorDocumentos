@@ -34,17 +34,6 @@ export default function App() {
       />
 
       <Route
-        path="/arquivos"
-        element={
-          <ProtectedRoute>
-            <AppShell>
-              <FoldersPage />
-            </AppShell>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
         path="/historico"
         element={
           <ProtectedRoute>
