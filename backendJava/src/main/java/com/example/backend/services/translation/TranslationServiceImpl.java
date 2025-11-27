@@ -4,9 +4,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.backend.entities.TranslationRecord;
 import com.example.backend.entities.User;
@@ -33,6 +35,16 @@ public class TranslationServiceImpl implements TranslationService {
 
   @Override
   public String translate(MultipartFile file, String sourceLang, String targetLang, String username) {
+
+     // Defina o tamanho máximo permitido 
+    long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    // Verifica se o tamanho do arquivo excede o limite
+    long size = file.getSize();
+    if (size > MAX_FILE_SIZE) {
+      throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "O arquivo excede o tamanho máximo permitido de 5MB.");
+    }
+
     // 1) salva upload
     Path uploaded = storage.saveUpload(file);
 
@@ -73,8 +85,6 @@ public class TranslationServiceImpl implements TranslationService {
 
     // 8) usuário (opcional)
     User user = userRepository.findByEmail(username).orElse(null);
-
-    long size = file.getSize();
 
     // 9) registra no banco
     TranslationRecord rec = TranslationRecord.builder()
