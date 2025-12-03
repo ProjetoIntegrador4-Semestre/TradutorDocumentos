@@ -1,5 +1,14 @@
 version: "3.9"
 services:
+  app:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
   libretranslate:
     image: libretranslate/libretranslate:latest
     ports:
@@ -52,6 +61,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: app
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      APP_OAUTH2_REDIRECT_URI: http://localhost:5173/oauth/callback
+      JWT_SECRET: IntrMvLCt0wNl8AhgqtP017Y5vkvh4WgfLfsULHhN2MFAhjWcbKD5BXikOF7mf85
+
     volumes:
       - ../data:/app/data
 
