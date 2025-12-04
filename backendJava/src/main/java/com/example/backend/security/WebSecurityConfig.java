@@ -61,7 +61,8 @@ public class WebSecurityConfig {
             "http://localhost:8081",
             "http://localhost:5173",
             "https://feature-integration-back-frontend.d31dzty0eyf11i.amplifyapp.com",
-            "http://100.30.34.113:8080"
+            "http://100.30.34.113:8080",
+            "https://tradudoc.duckdns.org"
             // "http://localhost:19006", "http://127.0.0.1:19006" // Expo web, se precisar
         ));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
