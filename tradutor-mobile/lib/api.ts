@@ -1,7 +1,7 @@
 // lib/api.ts
 import { getAuth, clearAuth } from "./storage";
 
-export const BASE_URL = "http://100.30.34.113:8080";
+export const BASE_URL = "http://localhost:8080";
 
 export class ApiError extends Error {
   status?: number;
