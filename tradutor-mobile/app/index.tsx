@@ -1,6 +1,7 @@
 import React from "react";
 import { Redirect } from "expo-router";
 import { useAuth } from "../context/AuthContext";
+import { ThemeProvider } from "../context/ThemeContext";  // Certifique-se de importar o ThemeProvider corretamente
 
 export default function Index() {
   const { user, loading } = useAuth();
@@ -13,6 +14,9 @@ export default function Index() {
     return <Redirect href="/login" />;
   }
 
-  // Usuário normal ou admin sempre vão para translator
-  return <Redirect href="/translator" />;
+  return (
+    <ThemeProvider>  {/* Envolva a aplicação com o ThemeProvider */}
+      <Redirect href="/translator" />
+    </ThemeProvider>
+  );
 }

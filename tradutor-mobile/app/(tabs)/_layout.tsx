@@ -44,7 +44,6 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="translator" options={{ title: "Tradutor" }} />
       <Tabs.Screen name="history" options={{ title: "Histórico" }} />
-      <Tabs.Screen name="folders" options={{ title: "Pastas" }} />
       <Tabs.Screen name="settings" options={{ title: "Config." }} />
 
       {/* 🔥 Adiciona a aba Admin SOMENTE SE o usuário for admin */}

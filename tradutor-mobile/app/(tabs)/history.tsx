@@ -1,4 +1,3 @@
-// app/(tabs)/history.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -63,7 +62,6 @@ export default function HistoryScreen() {
     load();
   }, [load]);
 
-  // auto-refresh quando uma tradução termina
   useEffect(() => {
     const handler = () => load();
     appEvents.on("history:refresh", handler);
@@ -148,7 +146,6 @@ export default function HistoryScreen() {
 
     if (!raw) return;
 
-    // se vier só "/files/xxx", prefixa com o backend (8080)
     const url = raw.startsWith("http") ? raw : `${BASE_URL}${raw}`;
 
     if (Platform.OS === "web") {
@@ -178,17 +175,19 @@ export default function HistoryScreen() {
         placeholder="Filtrar por nome ou idioma..."
         placeholderTextColor={theme.colors.muted}
         style={{
-          backgroundColor: "#fff",
-          borderRadius: 999,
+          backgroundColor: theme.colors.surface,
+          borderRadius: 12,
           paddingHorizontal: 16,
           paddingVertical: 10,
           borderWidth: 1,
           borderColor: theme.colors.border,
           marginBottom: 10,
+          color: "#9E9E9E",  // Cor cinza
+
         }}
       />
 
-      {/* chips de tipo */}
+      {/* filtro por tipo */}
       <View
         style={{
           flexDirection: "row",
@@ -208,10 +207,8 @@ export default function HistoryScreen() {
                 paddingVertical: 6,
                 borderRadius: 999,
                 borderWidth: 1,
-                borderColor: active
-                  ? theme.colors.primary
-                  : theme.colors.border,
-                backgroundColor: active ? "#EEF2FF" : "#fff",
+                borderColor: active ? theme.colors.primary : theme.colors.border,
+                backgroundColor: active ? "#EEF2FF" : theme.colors.surface,
               }}
             >
               <Text
@@ -242,7 +239,7 @@ export default function HistoryScreen() {
             alignItems: "center",
             paddingVertical: 8,
             borderRadius: 999,
-            backgroundColor: "#f3f4ff",
+            backgroundColor: "#4751c8ff",
           }}
         >
           <Text style={{ color: theme.colors.text }}>
@@ -280,7 +277,7 @@ export default function HistoryScreen() {
           <View
             key={r.id}
             style={{
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.surface,
               borderRadius: 12,
               borderWidth: 1,
               borderColor: theme.colors.border,
@@ -313,7 +310,7 @@ export default function HistoryScreen() {
                 paddingHorizontal: 16,
                 paddingVertical: 8,
                 borderRadius: 999,
-                backgroundColor: "#2563eb",
+                backgroundColor: theme.colors.primary,
               }}
             >
               <Text style={{ color: "#fff", fontWeight: "600" }}>Abrir</Text>

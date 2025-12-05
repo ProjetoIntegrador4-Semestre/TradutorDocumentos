@@ -1,6 +1,5 @@
-// app/(tabs)/translator.tsx
 import React, { useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Platform, ActivityIndicator, Alert, Linking } from "react-native";
+import { View, Text, TouchableOpacity, Platform, ActivityIndicator, Alert, Linking, Picker } from "react-native"; // Adicionando o Picker
 import * as DocumentPicker from "expo-document-picker";
 import { useTheme } from "../../context/ThemeContext";
 import { translateMany, MAX_MB } from "../../lib/translate";
@@ -56,7 +55,6 @@ export default function TranslatorScreen() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   function fileName(f: UIFile) {
-    // @ts-ignore
     return (f?.name as string) ?? (f as any)?.uri?.split("/").pop() ?? "arquivo";
   }
 
@@ -126,7 +124,6 @@ export default function TranslatorScreen() {
       }));
       setResults(ui);
 
-      // 👇 avisa o Histórico pra recarregar
       appEvents.emit("history:refresh");
 
       const oks = resultsRaw.filter((r) => r.ok).length;
@@ -160,26 +157,36 @@ export default function TranslatorScreen() {
       </Text>
 
       <Text style={{ color: theme.colors.muted, marginBottom: 6 }}>Idioma de destino</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-        {TARGETS.map((t) => {
-          const active = target === t.code;
-          return (
-            <TouchableOpacity
-              key={t.code}
-              onPress={() => setTarget(t.code)}
-              style={{
-                paddingVertical: 8,
-                paddingHorizontal: 12,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: active ? theme.colors.primary : theme.colors.border,
-                backgroundColor: active ? "#EEF2FF" : theme.colors.surface,
-              }}
-            >
-              <Text style={{ color: active ? theme.colors.primary : theme.colors.text }}>{t.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
+
+      {/* Dropdown para selecionar o idioma */}
+      <View
+        style={{
+          backgroundColor: theme.colors.surface,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          padding: 12,
+          marginBottom: 12,
+        }}
+      >
+       <Picker
+          selectedValue={target}
+          onValueChange={(itemValue) => setTarget(itemValue)}
+          style={{
+            height: 40, // Aumentei um pouco a altura para melhorar o layout
+            color: "#cbcbcbff", // Cor cinza para o texto
+            backgroundColor: "#2C2F38", // Cor de fundo mais escura
+            borderWidth: 1, // Adicionando uma borda
+            borderColor: "#9f9f9fff", // Cor da borda em cinza claro
+            borderRadius: 12, // Arredondando as bordas
+            paddingHorizontal: 10, // Ajustando o espaçamento interno
+        }}
+      >
+          {TARGETS.map((t) => (
+            <Picker.Item label={t.label} value={t.code} key={t.code} />
+          ))}
+      </Picker>
+
       </View>
 
       <View
@@ -253,7 +260,7 @@ export default function TranslatorScreen() {
         disabled={loading || files.length === 0}
         style={{
           opacity: loading || files.length === 0 ? 0.6 : 1,
-          backgroundColor: "#2b4bff",
+          backgroundColor: "#232323ff",
           borderRadius: 8,
           paddingVertical: 14,
           alignItems: "center",
@@ -263,7 +270,7 @@ export default function TranslatorScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={{ color: "#fff", fontWeight: "700", letterSpacing: 1 }}>
+          <Text style={{ color: "#0054fbff", fontWeight: "700", letterSpacing: 1 }}>
             Enviar para tradução ({files.length})
           </Text>
         )}
@@ -279,9 +286,7 @@ export default function TranslatorScreen() {
             padding: 14,
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "700", marginBottom: 8 }}>
-            Traduções concluídas
-          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "700", marginBottom: 8 }}>Traduções concluídas</Text>
           {results.map((r, i) => (
             <View
               key={`${r.name}-${i}`}
@@ -301,7 +306,7 @@ export default function TranslatorScreen() {
                     Baixar / Abrir tradução
                   </a>
                 ) : (
-                  <TouchableOpacity onPress={() => Linking.openURL(r.url!)}>
+                  <TouchableOpacity onPress={() => Linking.openURL(r.url!)} style={{ marginTop: 6 }}>
                     <Text style={{ color: "#2b64ff", fontWeight: "600" }}>Abrir tradução</Text>
                   </TouchableOpacity>
                 )
