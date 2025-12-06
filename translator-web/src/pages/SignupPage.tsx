@@ -4,6 +4,43 @@ import { register, humanizeSignupError } from "../services/api";
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import "../styles/auth.css";
 
+// Função para avaliar a força da senha
+const evaluatePasswordStrength = (password: string) => {
+  let strength = 0;
+
+  // Verificar o comprimento da senha
+  if (password.length >= 8) strength += 1;
+  if (password.length >= 12) strength += 1;
+
+  // Verificar se contém números
+  if (/\d/.test(password)) strength += 1;
+
+  // Verificar se contém letras maiúsculas
+  if (/[A-Z]/.test(password)) strength += 1;
+
+  // Verificar se contém caracteres especiais
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 1;
+
+  return strength;
+};
+
+// Mapeia a força da senha para cores e texto
+const getStrengthLabel = (strength: number) => {
+  switch (strength) {
+    case 0:
+    case 1:
+      return { label: "Fraca", color: "#ff0000" };
+    case 2:
+      return { label: "Média", color: "#ffcc00" };
+    case 3:
+      return { label: "Boa", color: "#33cc33" };
+    case 4:
+      return { label: "Muito Boa", color: "#009900" };
+    default:
+      return { label: "", color: "" };
+  }
+};
+
 export default function SignupPage() {
   const nav = useNavigate();
   const [nome, setNome] = React.useState("");
@@ -13,15 +50,25 @@ export default function SignupPage() {
   const [loading, setLoading] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
-  
+  const [isPasswordFocused, setIsPasswordFocused] = React.useState(false);
+
   // Estados para mostrar/esconder as senhas
   const [showSenha, setShowSenha] = React.useState(false);
   const [showConfirma, setShowConfirma] = React.useState(false);
+
+  // Calcular a força da senha
+  const passwordStrength = evaluatePasswordStrength(senha);
+  const strengthLabel = getStrengthLabel(passwordStrength);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
     setOk(null);
+
+    if (passwordStrength < 2) {
+      setErro("A senha precisa ser no mínimo 'Média' (Use letras, números e símbolos).");
+      return;
+    }
 
     if (senha !== confirma) {
       setErro("As senhas não coincidem.");
@@ -76,25 +123,42 @@ export default function SignupPage() {
           <div className="form-group">
             <div className="password-wrapper">
               <input
-                type={showSenha ? "text" : "password"} // Alternando entre texto e senha
+                type={showSenha ? "text" : "password"}
                 placeholder="Senha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 required
+                onFocus={() => setIsPasswordFocused(true)}
+                onBlur={() => setIsPasswordFocused(false)}
               />
               <div
                 className="eye-icon"
-                onClick={() => setShowSenha(!showSenha)} // Alterna o estado do olho
+                onClick={() => setShowSenha(!showSenha)}
               >
                 {showSenha ? <FaEyeSlash /> : <FaEye />}
               </div>
             </div>
+
+            {isPasswordFocused && senha && (
+              <div className="strength-container">
+                <div 
+                  className="password-strength-bar" 
+                  style={{ 
+                    width: `${passwordStrength * 25}%`, 
+                    backgroundColor: strengthLabel.color 
+                  }}
+                />
+                <span className="strength-text" style={{ color: strengthLabel.color }}>
+                  {strengthLabel.label}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="form-group">
             <div className="password-wrapper">
               <input
-                type={showConfirma ? "text" : "password"} // Alternando entre texto e senha
+                type={showConfirma ? "text" : "password"}
                 placeholder="Confirmar senha"
                 value={confirma}
                 onChange={(e) => setConfirma(e.target.value)}
@@ -102,7 +166,7 @@ export default function SignupPage() {
               />
               <div
                 className="eye-icon"
-                onClick={() => setShowConfirma(!showConfirma)} // Alterna o estado do olho
+                onClick={() => setShowConfirma(!showConfirma)}
               >
                 {showConfirma ? <FaEyeSlash /> : <FaEye />}
               </div>
