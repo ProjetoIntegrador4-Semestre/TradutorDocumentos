@@ -210,11 +210,11 @@ export function logout(): void {
 
 /** ====== Google OAuth ====== */
 export function getGoogleOAuthUrl(): string | null {
-  const u = (import.meta as any)?.env?.VITE_GOOGLE_OAUTH_URL as string | undefined;
+  const u = "https://tradudoc.duckdns.org/oauth2/authorization/google?redirect_uri=https://feature-integration-back-frontend.d31dzty0eyf11i.amplifyapp.com/oauth/callback";
   if (u && u.trim()) return u.trim();
   try {
     const base = API_BASE.replace(/\/+$/, "");
-    // backend agora redireciona sempre para o callback configurado nele
+
     return `${base}/oauth2/authorization/google`;
   } catch {
     return null;
@@ -223,12 +223,15 @@ export function getGoogleOAuthUrl(): string | null {
 
 export function beginGoogleLogin(): void {
   const url = getGoogleOAuthUrl();
+
   if (!url) {
-    console.warn("VITE_GOOGLE_OAUTH_URL não configurada.");
+    console.warn("URL do OAuth do Google não configurada.");
     return;
   }
+
   window.location.href = url;
 }
+
 
 /** Lê token do callback (?token=... ou #access_token=...), salva e limpa a URL */
 export function consumeOAuthTokenFromUrl(): string | null {

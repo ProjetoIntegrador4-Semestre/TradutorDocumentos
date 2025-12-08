@@ -8,7 +8,7 @@ export default function OAuthCallback() {
 
   React.useEffect(() => {
     (async () => {
-      const token = consumeOAuthTokenFromUrl(); // lê ?token=... ou #access_token=...
+      const token = consumeOAuthTokenFromUrl(); 
       if (!token) {
         setError("Não foi possível obter o token do Google.");
         return;
