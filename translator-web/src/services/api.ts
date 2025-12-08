@@ -3,7 +3,7 @@ import axios, { AxiosError } from "axios";
 /** ====== BASE / ENDPOINTS ====== */
 const API_BASE =
   (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/+$/, "") ||
-  "https://tradudoc.duckdns.org";
+  "http://localhost:8080";
 
 const BOOT_TOKEN = (import.meta as any)?.env?.VITE_BOOT_TOKEN || "";
 
