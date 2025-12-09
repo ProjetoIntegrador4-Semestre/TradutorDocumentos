@@ -210,7 +210,7 @@ export function logout(): void {
 
 /** ====== Google OAuth ====== */
 export function getGoogleOAuthUrl(): string | null {
-  const u = "http://tradudoc.duckdns.org/oauth2/authorization/google";
+  const u = "https://tradudoc.duckdns.org/oauth2/authorization/google";
   if (u && u.trim()) return u.trim();
   try {
     const base = API_BASE.replace(/\/+$/, "");
