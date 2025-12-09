@@ -3,7 +3,7 @@ import axios, { AxiosError } from "axios";
 /** ====== BASE / ENDPOINTS ====== */
 const API_BASE =
   (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/+$/, "") ||
-  "http://localhost:8080";
+  "https://tradudoc.duckdns.org";
 
 const BOOT_TOKEN = (import.meta as any)?.env?.VITE_BOOT_TOKEN || "";
 
@@ -210,7 +210,7 @@ export function logout(): void {
 
 /** ====== Google OAuth ====== */
 export function getGoogleOAuthUrl(): string | null {
-  const u = "https://tradudoc.duckdns.org/oauth2/authorization/google";
+  const u = "http://tradudoc.duckdns.org/oauth2/authorization/google";
   if (u && u.trim()) return u.trim();
   try {
     const base = API_BASE.replace(/\/+$/, "");
