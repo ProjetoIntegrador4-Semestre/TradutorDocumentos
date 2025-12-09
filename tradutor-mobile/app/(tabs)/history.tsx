@@ -8,7 +8,11 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
+  Alert,
 } from "react-native";
+import * as Sharing from 'expo-sharing';
+import { File as ExpoFile, Paths } from 'expo-file-system';
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../../context/ThemeContext";
 import { apiFetch, BASE_URL } from "../../lib/api";
 import { appEvents } from "../../lib/events";
@@ -38,6 +42,7 @@ const TYPE_FILTERS = [
 ];
 
 export default function HistoryScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const [items, setItems] = useState<RecordItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,12 +96,21 @@ export default function HistoryScreen() {
       .filter((it) => {
         if (typeFilter === "all") return true;
         const mime = (it.mimeType || it.fileType || "").toLowerCase();
-        if (!mime) return true;
-        if (typeFilter === "pdf") return mime.includes("pdf");
-        if (typeFilter === "docx") return mime.includes("word");
-        if (typeFilter === "pptx")
-          return mime.includes("presentation") || mime.includes("powerpoint");
-        if (typeFilter === "txt") return mime.includes("text");
+        const fileName = titleOf(it).toLowerCase();
+        if (!mime && !fileName) return true;
+        
+        if (typeFilter === "pdf") {
+          return mime.includes("pdf") || fileName.endsWith(".pdf");
+        }
+        if (typeFilter === "docx") {
+          return mime.includes("word") || mime.includes("docx") || fileName.endsWith(".docx") || fileName.endsWith(".doc");
+        }
+        if (typeFilter === "pptx") {
+          return mime.includes("presentation") || mime.includes("powerpoint") || fileName.endsWith(".pptx") || fileName.endsWith(".ppt");
+        }
+        if (typeFilter === "txt") {
+          return mime.includes("text") || fileName.endsWith(".txt");
+        }
         return true;
       })
       .sort((a, b) => {
@@ -138,7 +152,31 @@ export default function HistoryScreen() {
     return d.toLocaleString();
   }
 
-  function openRecord(r: RecordItem) {
+  async function deleteRecord(r: RecordItem) {
+    Alert.alert(
+      t('history.confirmDelete'),
+      `${t('history.deleteMessage')} "${titleOf(r)}"?`,
+      [
+        { text: t('common.cancel'), style: "cancel" },
+        {
+          text: t('common.delete'),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiFetch(`/records/${r.id}`, { method: "DELETE" });
+              Alert.alert(t('common.success'), t('history.deleteSuccess'));
+              load();
+            } catch (error: any) {
+              console.error("Erro ao excluir:", error);
+              Alert.alert(t('common.error'), t('history.deleteError'));
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function openRecord(r: RecordItem) {
     let raw =
       r.downloadUrl ||
       r.fileUrl ||
@@ -147,11 +185,78 @@ export default function HistoryScreen() {
     if (!raw) return;
 
     const url = raw.startsWith("http") ? raw : `${BASE_URL}${raw}`;
+    const fileName = titleOf(r);
 
-    if (Platform.OS === "web") {
-      window.open(url, "_blank");
-    } else {
-      Linking.openURL(url);
+    try {
+      if (Platform.OS === "web") {
+        window.open(url, "_blank");
+        return;
+      }
+
+      // Verifica se é PDF - PDF pode abrir direto
+      const isPdf = fileName.toLowerCase().endsWith('.pdf');
+      
+      if (isPdf) {
+        // Para PDF, tenta abrir direto primeiro
+        try {
+          await Linking.openURL(url);
+          return;
+        } catch (e) {
+          console.log("Erro ao abrir PDF direto, tentando download...");
+        }
+      }
+
+      // Para outros arquivos ou se PDF falhar, faz download e compartilha
+      Alert.alert("Baixando", "Aguarde, baixando arquivo...");
+
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Erro ${response.status} ao baixar arquivo`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+
+      const file = new ExpoFile(Paths.cache, fileName);
+      
+      // Verifica se o arquivo já existe e remove
+      if (file.exists) {
+        console.log("Arquivo já existe, removendo...");
+        file.delete();
+      }
+      
+      // Cria o arquivo e escreve os dados
+      file.create();
+      file.write(bytes);
+      
+      const fileUri = file.uri;
+
+      const isShareAvailable = await Sharing.isAvailableAsync();
+      
+      if (isShareAvailable) {
+        await Sharing.shareAsync(fileUri, {
+          dialogTitle: 'Abrir arquivo traduzido',
+        });
+      } else {
+        Alert.alert(
+          "Arquivo Baixado",
+          `Arquivo salvo em: ${fileUri}\n\nCompartilhamento não disponível neste dispositivo.`
+        );
+      }
+
+    } catch (error: any) {
+      console.error("Erro ao abrir arquivo:", error);
+      
+      let errorMessage = error.message || "Erro desconhecido";
+      
+      if (errorMessage.includes("404")) {
+        errorMessage = "Arquivo não encontrado no servidor (404).";
+      } else if (errorMessage.includes("401") || errorMessage.includes("403")) {
+        errorMessage = "Erro de autenticação.";
+      }
+      
+      Alert.alert("Erro", errorMessage);
     }
   }
 
@@ -165,14 +270,14 @@ export default function HistoryScreen() {
           marginBottom: 12,
         }}
       >
-        Histórico
+        {t('history.title')}
       </Text>
 
       {/* filtro por texto */}
       <TextInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Filtrar por nome ou idioma..."
+        placeholder={t('history.filterByName')}
         placeholderTextColor={theme.colors.muted}
         style={{
           backgroundColor: theme.colors.surface,
@@ -243,7 +348,7 @@ export default function HistoryScreen() {
           }}
         >
           <Text style={{ color: theme.colors.text }}>
-            {sortDesc ? "Mais recentes" : "Mais antigos"}
+            {sortDesc ? t('history.newest') : t('history.oldest')}
           </Text>
         </TouchableOpacity>
 
@@ -256,7 +361,7 @@ export default function HistoryScreen() {
             backgroundColor: theme.colors.primary,
           }}
         >
-          <Text style={{ color: "#fff", fontWeight: "600" }}>Atualizar</Text>
+          <Text style={{ color: "#fff", fontWeight: "600" }}>{t('common.refresh')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -269,7 +374,7 @@ export default function HistoryScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         {filtered.length === 0 && !loading && (
           <Text style={{ color: theme.colors.muted }}>
-            Nenhuma tradução encontrada.
+            {t('history.noTranslations')}
           </Text>
         )}
 
@@ -297,24 +402,40 @@ export default function HistoryScreen() {
             </Text>
 
             <Text style={{ color: theme.colors.muted, marginBottom: 2 }}>
-              Tipo: {typeLabelOf(r)}   {"   "}Para: {langLabelOf(r)}
+              {t('history.type')}: {typeLabelOf(r)}   {"   "}{t('history.to')}: {langLabelOf(r)}
             </Text>
             <Text style={{ color: theme.colors.muted, marginBottom: 8 }}>
               {dateLabelOf(r)}
             </Text>
 
-            <TouchableOpacity
-              onPress={() => openRecord(r)}
-              style={{
-                alignSelf: "flex-start",
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 999,
-                backgroundColor: theme.colors.primary,
-              }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "600" }}>Abrir</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => openRecord(r)}
+                style={{
+                  flex: 1,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  backgroundColor: theme.colors.primary,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "600" }}>{t('common.open')}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => deleteRecord(r)}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  backgroundColor: "#dc2626",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "600" }}>{t('common.delete')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
       </ScrollView>

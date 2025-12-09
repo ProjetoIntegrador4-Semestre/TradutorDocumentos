@@ -1,7 +1,7 @@
 // lib/api.ts
 import { getAuth, clearAuth } from "./storage";
 
-export const BASE_URL = "http://localhost:8080";
+export const BASE_URL = "https://tradudoc.duckdns.org";
 
 export class ApiError extends Error {
   status?: number;

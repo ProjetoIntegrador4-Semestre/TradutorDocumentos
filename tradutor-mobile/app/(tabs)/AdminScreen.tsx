@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, Button, FlatList } from 'react-native';
-import { useAuth } from '../../context/AuthContext'; // Contexto para gerenciar autenticação
+import { useAuth } from '../../context/AuthContext';
 
 const AdminScreen = () => {
   const { user, signOut } = useAuth();
@@ -34,9 +34,7 @@ const AdminScreen = () => {
   return (
     <View>
       <Text>Bem-vindo, {user?.name}</Text>
-
       <Button title="Logout" onPress={signOut} />
-
       <Button title="Adicionar usuário" onPress={handleAddUser} />
 
       <FlatList
@@ -45,11 +43,9 @@ const AdminScreen = () => {
         renderItem={({ item }) => (
           <View>
             <Text>{item.name} — {item.role}</Text>
-
             {item.role !== 'admin' && (
               <Button title="Promover para admin" onPress={() => handlePromoteUser(item.id)} />
             )}
-
             <Button title="Excluir" onPress={() => handleDeleteUser(item.id)} />
           </View>
         )}
@@ -57,3 +53,5 @@ const AdminScreen = () => {
     </View>
   );
 };
+
+export default AdminScreen;

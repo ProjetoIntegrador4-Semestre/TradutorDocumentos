@@ -2,12 +2,17 @@
 import React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";  // << IMPORTANTE
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const { user } = useAuth(); // << AQUI PEGAMOS O USER
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -18,8 +23,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
-          height: 56,
-          paddingBottom: 6,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom + 6,
           paddingTop: 6,
         },
         tabBarIcon: ({ color, size, focused }) => {
@@ -42,14 +47,22 @@ export default function TabsLayout() {
         },
       })}
     >
-      <Tabs.Screen name="translator" options={{ title: "Tradutor" }} />
-      <Tabs.Screen name="history" options={{ title: "Histórico" }} />
-      <Tabs.Screen name="settings" options={{ title: "Config." }} />
+      <Tabs.Screen name="translator" options={{ title: t('tabs.translator') }} />
+      <Tabs.Screen name="history" options={{ title: t('tabs.history') }} />
+      <Tabs.Screen name="settings" options={{ title: t('tabs.settings') }} />
 
       {/* 🔥 Adiciona a aba Admin SOMENTE SE o usuário for admin */}
       {user?.role === "admin" && (
-        <Tabs.Screen name="admin" options={{ title: "Admin" }} />
+        <Tabs.Screen name="admin" options={{ title: t('tabs.admin') }} />
       )}
+      
+      {/* Esconde a tela AdminScreen da navegação */}
+      <Tabs.Screen 
+        name="AdminScreen" 
+        options={{ 
+          href: null,
+        }} 
+      />
     </Tabs>
   );
 }
