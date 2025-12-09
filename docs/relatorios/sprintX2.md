@@ -1,69 +1,72 @@
-### 5️⃣ Relatório Quinzenal – Sprint
+# 🗓️ Relatório Quinzenal – Sprint 2
 
-#### 🎯 Objetivo da Sprint
-Consolidar o desenvolvimento das principais partes do projeto (frontend web, mobile e backend Python já funcional), avançar na migração do backend para Java e preparar a integração entre os módulos, garantindo a base necessária para posterior implantação na nuvem.
-
----
-
-#### ✅ Lista de Entregas Concluídas
-- Frontend web com telas principais implementadas (Login, Registro, Tradutor e Histórico).
-- Aplicativo mobile com fluxo de seleção e upload de documentos concluído.
-- Backend em Python com endpoints de tradução e histórico funcionando.
-- Configuração inicial de autenticação JWT no backend.
-- Estrutura de repositório organizada com branches e commits padronizados.
-- Documento de visão atualizado.
-- Protótipo no Figma ajustado de acordo com feedback da equipe/professores.
+## 🎯 Objetivo da Sprint  
+Finalizar a integração completa entre os módulos do sistema — backend, frontend web e aplicativo mobile — e consolidar a implantação dos serviços principais na nuvem, incluindo o banco de dados no BigQuery e o deploy do frontend.
 
 ---
 
-#### 📊 Indicadores
-- **Board (GitHub Project):**
-  - Issues abertas: 23  
-  - Issues fechadas: 14  
-  - PRs mergeadas: 5  
-- Velocidade da sprint: **~80% das entregas planejadas concluídas**.
+## ✅ Lista de Entregas Concluídas  
+- **Frontend Web** implantado na nuvem (AWS Amplify) e acessível publicamente.  
+- **Banco de Dados (BigQuery)** configurado e operacional, com tabelas de histórico e usuários sincronizadas.  
+- **Backend Java** parcialmente integrado com **frontend** e **aplicativo mobile**, garantindo o fluxo completo de autenticação e tradução de documentos.  
+- Integração com **API externa de tradução** validada e funcional.  
+- Testes de comunicação entre os módulos concluídos (requisições autenticadas e respostas validadas).  
+- Ajustes finais de layout e responsividade no frontend.  
 
 ---
 
-#### 🚧 Dificuldades Encontradas (Impedimentos)
-- Integração das partes (frontend, mobile e backend) ainda não concluída.
-- Backend em Java em desenvolvimento → alguns endpoints ainda não migrados do Python.
-- Parte de infraestrutura em nuvem (AWS/CloudFormation) ainda pendente, com dificuldades de configuração inicial.
-- Ajustes de compatibilidade entre autenticação JWT e os dois backends (Python x Java).
+## 📊 Indicadores  
+- **Board (GitHub Project):**  
+  - Issues abertas: 6  
+  - Issues fechadas: 19  
+  - PRs mergeadas: 10  
+- **Velocidade da sprint:** ~80% das entregas planejadas concluídas  
+- **Status Geral:** Sistema funcional com módulos integrados e infraestrutura inicial consolidada  
 
 ---
 
-#### 🔜 Próximos Passos (Próxima Sprint)
-- Concluir a migração do backend de Python para Java.
-- Integrar frontend e mobile com o backend Java.
-- Configurar armazenamento de arquivos traduzidos no S3 (AWS).
-- Implementar pipeline de CI/CD (Github Actions).
-- Avançar na arquitetura em nuvem (CloudFormation/Terraform).
-- Testes integrados entre todos os módulos.
+## 🚧 Dificuldades Encontradas (Impedimentos)  
+- Configuração do **CI/CD (GitHub Actions)** ainda em andamento.  
+- Ajustes de performance no backend ao consumir dados do BigQuery.  
+- Sincronização de logs e métricas entre backend e frontend ainda em otimização.  
+- Falta de documentação detalhada de endpoints para o time mobile.  
 
 ---
 
-#### 🔗 Resumo de Rastreabilidade → Issues x PRs x Entregas
-- **Issues**: vinculadas às features concluídas (ex.: upload de arquivos, autenticação JWT).
-- **PRs**: cada entrega associada a pelo menos um PR mergeado na branch `develop`.
-- **Entregas**: ligadas às milestones definidas no board (ex.: “Frontend básico”, “Mobile upload”, “Backend Python funcional”).
+## 🔜 Próximos Passos (Próxima Sprint)  
+- Concluir **pipeline de CI/CD** para backend e frontend.  
+- Automatizar **deploy contínuo** do backend na nuvem.  
+- Implementar **armazenamento de arquivos** via AWS S3.  
+- Finalizar o **Relatório de Segurança** e testes integrados.  
+- Criar **dashboard administrativo** com dados do BigQuery.  
+- Executar **testes de produção** e ajustes finais para apresentação.  
 
 ---
 
-#### 🤝 Reflexão da Equipe (Mini Retrospectiva)
-
-- **O que funcionou bem:**
-  - Boa divisão de tarefas entre frontend, mobile e backend.
-  - Comunicação clara via board e commits.
-  - Protótipo validado e aceito pelos stakeholders.
-
-- **O que não funcionou:**
-  - Atraso na parte de nuvem e integração dos módulos.
-  - Backend em Java ainda sem paridade completa com o backend Python.
-
-- **O que pode ser melhorado:**
-  - Melhorar a sincronização entre os times de backend e frontend para alinhar contratos de API.
-  - Dedicar tempo específico apenas para a configuração de infraestrutura (AWS/CI/CD).
-  - Reuniões mais curtas, mas mais frequentes, para acompanhar bloqueios de integração.
+## 🔗 Rastreabilidade → Issues x PRs x Entregas  
+- **Issues:** vinculadas às tasks de integração entre módulos e deploy na nuvem.  
+- **PRs:** revisados e aprovados antes do merge em `develop` e `main`.  
+- **Entregas:** associadas às milestones “Deploy Frontend”, “Integração Backend”, “Banco BigQuery Ativo”.  
 
 ---
+
+## 🤝 Reflexão da Equipe (Mini Retrospectiva)  
+
+### ✅ O que funcionou bem  
+- Deploys do frontend e BigQuery bem-sucedidos.  
+- Comunicação estável entre backend, web e mobile.  
+- Boa organização e divisão de tarefas no board.  
+
+### ⚠️ O que não funcionou  
+- Pequenos atrasos na configuração do pipeline CI/CD.  
+- Falta de padronização inicial nos logs do backend.  
+
+### 🚀 O que pode ser melhorado  
+- Centralizar documentação de APIs e endpoints.  
+- Automatizar mais processos de build e deploy.  
+- Priorizar otimizações e segurança para a entrega final.  
+
+---
+
+📅 **Data:** Outubro de 2025  
+📍 **Projeto:** Tradução Automática de Documentos – SENAI-SP  
