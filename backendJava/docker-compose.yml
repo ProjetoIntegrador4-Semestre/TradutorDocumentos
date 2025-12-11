@@ -9,6 +9,8 @@ services:
     volumes:
       - ./data:/data
       - ./letsencrypt:/etc/letsencrypt
+    oauth2:
+      redirect-uri: https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com/oauth/callback
   libretranslate:
     image: libretranslate/libretranslate:latest
     ports:
