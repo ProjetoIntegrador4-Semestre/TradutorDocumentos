@@ -63,6 +63,7 @@ services:
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       JWT_SECRET: IntrMvLCt0wNl8AhgqtP017Y5vkvh4WgfLfsULHhN2MFAhjWcbKD5BXikOF7mf85
       SERVER_FORWARD_HEADERS_STRATEGY: native
+      APP_OAUTH2_REDIRECT_URI: https://tradudoc.duckdns.org/oauth/callback
 
     volumes:
       - ../data:/app/data

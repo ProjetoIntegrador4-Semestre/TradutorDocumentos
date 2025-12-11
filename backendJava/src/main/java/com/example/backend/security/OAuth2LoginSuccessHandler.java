@@ -36,7 +36,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             UserRepository userRepository,
             JwtUtils jwtUtils,
             ObjectMapper objectMapper,
-            @Value("${app.oauth2.redirect-uri:}") String frontendCallback) {
+            @Value("${app.oauth2.redirect-uri:${APP_OAUTH2_REDIRECT_URI:}}") String frontendCallback) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.objectMapper = objectMapper;
