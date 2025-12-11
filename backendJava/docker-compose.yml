@@ -9,8 +9,6 @@ services:
     volumes:
       - ./data:/data
       - ./letsencrypt:/etc/letsencrypt
-    oauth2:
-      redirect-uri: https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com/oauth/callback
   libretranslate:
     image: libretranslate/libretranslate:latest
     ports:
@@ -64,6 +62,7 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       JWT_SECRET: IntrMvLCt0wNl8AhgqtP017Y5vkvh4WgfLfsULHhN2MFAhjWcbKD5BXikOF7mf85
+      APP_OAUTH2_REDIRECT_URI: https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com//oauth/callback
       SERVER_FORWARD_HEADERS_STRATEGY: native
 
     volumes:
