@@ -2,7 +2,7 @@ name: Deploy Backend
 
 on:
   push:
-    branches: [ main, feature/integration-back-frontend ]
+    branches: [ main, develop ]
     paths: [ "backendJava/**", ".github/workflows/backend-deploy.yml" ]
 
 jobs:
@@ -55,7 +55,7 @@ jobs:
   deploy-to-ec2:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v3
       
