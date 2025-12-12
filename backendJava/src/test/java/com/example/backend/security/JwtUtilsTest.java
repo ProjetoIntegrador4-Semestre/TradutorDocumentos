@@ -1,16 +1,12 @@
 package com.example.backend.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-
-import javax.crypto.SecretKey;
+import com.example.backend.entities.User;
 
 class JwtUtilsTest {
 
@@ -26,17 +22,23 @@ class JwtUtilsTest {
         ReflectionTestUtils.setField(jwtUtils, "jwtExpirationMs", TEST_EXPIRATION_MS);
     }
 
+    // Helper para criar UserDetailsImpl para testes
+    private UserDetailsImpl createUserDetails(Long id, String username, String email, String role) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPassword("encoded_password");
+        user.setRole(role != null ? role : "user");
+        user.setEnabled(true);
+        return UserDetailsImpl.build(user);
+    }
+
     @Test
     @DisplayName("generateJwtToken deve retornar token com todos os claims corretos")
     void generateJwtToken_returnsTokenWithAllClaims() {
         // arrange
-        UserDetailsImpl userDetails = new UserDetailsImpl(
-            1L,
-            "samuel",
-            "samuel@example.com",
-            null,
-            "user"
-        );
+        UserDetailsImpl userDetails = createUserDetails(1L, "samuel", "samuel@example.com", "user");
 
         // act
         String token = jwtUtils.generateJwtToken(userDetails);
@@ -59,13 +61,7 @@ class JwtUtilsTest {
     @DisplayName("getUserIdFromJwtToken deve extrair o ID correto do token")
     void getUserIdFromJwtToken_returnsCorrectId() {
         // arrange
-        UserDetailsImpl userDetails = new UserDetailsImpl(
-            42L,
-            "john",
-            "john@example.com",
-            null,
-            "admin"
-        );
+        UserDetailsImpl userDetails = createUserDetails(42L, "john", "john@example.com", "admin");
         String token = jwtUtils.generateJwtToken(userDetails);
 
         // act
@@ -79,13 +75,7 @@ class JwtUtilsTest {
     @DisplayName("getEmailFromJwtToken deve extrair o email correto do token")
     void getEmailFromJwtToken_returnsCorrectEmail() {
         // arrange
-        UserDetailsImpl userDetails = new UserDetailsImpl(
-            1L,
-            "test",
-            "test@domain.com",
-            null,
-            "user"
-        );
+        UserDetailsImpl userDetails = createUserDetails(1L, "test", "test@domain.com", "user");
         String token = jwtUtils.generateJwtToken(userDetails);
 
         // act
@@ -99,22 +89,10 @@ class JwtUtilsTest {
     @DisplayName("getRoleFromJwtToken deve extrair o role correto do token")
     void getRoleFromJwtToken_returnsCorrectRole() {
         // arrange
-        UserDetailsImpl userDetailsAdmin = new UserDetailsImpl(
-            1L,
-            "admin_user",
-            "admin@example.com",
-            null,
-            "admin"
-        );
+        UserDetailsImpl userDetailsAdmin = createUserDetails(1L, "admin_user", "admin@example.com", "admin");
         String tokenAdmin = jwtUtils.generateJwtToken(userDetailsAdmin);
 
-        UserDetailsImpl userDetailsUser = new UserDetailsImpl(
-            2L,
-            "normal_user",
-            "user@example.com",
-            null,
-            "user"
-        );
+        UserDetailsImpl userDetailsUser = createUserDetails(2L, "normal_user", "user@example.com", "user");
         String tokenUser = jwtUtils.generateJwtToken(userDetailsUser);
 
         // act & assert
@@ -126,13 +104,7 @@ class JwtUtilsTest {
     @DisplayName("validateJwtToken deve retornar true para token válido e não-expirado")
     void validateJwtToken_returnsTrue_forValidToken() {
         // arrange
-        UserDetailsImpl userDetails = new UserDetailsImpl(
-            1L,
-            "samuel",
-            "samuel@example.com",
-            null,
-            "user"
-        );
+        UserDetailsImpl userDetails = createUserDetails(1L, "samuel", "samuel@example.com", "user");
         String token = jwtUtils.generateJwtToken(userDetails);
 
         // act
@@ -159,13 +131,7 @@ class JwtUtilsTest {
     @DisplayName("validateJwtToken deve retornar false para token com signature inválida")
     void validateJwtToken_returnsFalse_forTamperedToken() {
         // arrange
-        UserDetailsImpl userDetails = new UserDetailsImpl(
-            1L,
-            "samuel",
-            "samuel@example.com",
-            null,
-            "user"
-        );
+        UserDetailsImpl userDetails = createUserDetails(1L, "samuel", "samuel@example.com", "user");
         String validToken = jwtUtils.generateJwtToken(userDetails);
         
         // Altera a última parte (signature) do token
@@ -191,21 +157,14 @@ class JwtUtilsTest {
     @DisplayName("generateJwtToken com role null resulta em 'user' (normalizacao da classe)")
     void generateJwtToken_withNullRole_convertsToUser() {
         // arrange
-        UserDetailsImpl userDetails = new UserDetailsImpl(
-            5L,
-            "test_user",
-            "test@example.com",
-            null,
-            null // role nula
-        );
+        UserDetailsImpl userDetails = createUserDetails(5L, "test_user", "test@example.com", null);
 
         // act
         String token = jwtUtils.generateJwtToken(userDetails);
 
         // assert
         assertThat(jwtUtils.validateJwtToken(token)).isTrue();
-        // UserDetailsImpl parece converter null para "user" na construção, ou o campo tem default
-        // Comportamento observado: quando role é null, token tem "user"
+        // UserDetailsImpl.build converte null para "user"
         assertThat(jwtUtils.getRoleFromJwtToken(token)).isEqualTo("user");
     }
 
@@ -213,13 +172,7 @@ class JwtUtilsTest {
     @DisplayName("Token gerado deve ser válido quando chamado múltiplas vezes")
     void generateJwtToken_multipleCallsProduceValidTokens() {
         // arrange
-        UserDetailsImpl userDetails = new UserDetailsImpl(
-            1L,
-            "samuel",
-            "samuel@example.com",
-            null,
-            "user"
-        );
+        UserDetailsImpl userDetails = createUserDetails(1L, "samuel", "samuel@example.com", "user");
 
         // act
         String token1 = jwtUtils.generateJwtToken(userDetails);
@@ -238,13 +191,7 @@ class JwtUtilsTest {
     void getUserNameFromJwtToken_returnsUsernameClaimFromToken() {
         // arrange
         // Nota: generateJwtToken salva email no claim "username"
-        UserDetailsImpl userDetails = new UserDetailsImpl(
-            1L,
-            "john_doe",
-            "john@example.com",
-            null,
-            "user"
-        );
+        UserDetailsImpl userDetails = createUserDetails(1L, "john_doe", "john@example.com", "user");
         String token = jwtUtils.generateJwtToken(userDetails);
 
         // act
