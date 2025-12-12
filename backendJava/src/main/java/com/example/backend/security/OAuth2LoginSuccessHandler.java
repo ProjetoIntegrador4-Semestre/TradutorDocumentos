@@ -25,22 +25,24 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtUtils jwtUtils;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Defina no ambiente/propriedades:
-     *   app.oauth2.redirect-uri = http://localhost:5173/oauth/callback
-     * (em Docker Compose: APP_OAUTH2_REDIRECT_URI=...)
-     */
+    // Propriedade para o callback WEB/Desktop
     private final String frontendCallback;
+    
+    // Propriedade para o callback Mobile (Deep Link) - NOVO
+    private final String mobileCallback;
 
     public OAuth2LoginSuccessHandler(
             UserRepository userRepository,
             JwtUtils jwtUtils,
             ObjectMapper objectMapper,
-            @Value("${app.oauth2.redirect-uri:}") String frontendCallback) {
+            @Value("${app.oauth2.redirect-uri:}") String frontendCallback,
+            // Injetando a nova propriedade de configuração - NOVO
+            @Value("${app.oauth2.mobile-redirect-uri:}") String mobileCallback) { 
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.objectMapper = objectMapper;
         this.frontendCallback = frontendCallback;
+        this.mobileCallback = mobileCallback; // Atribuição
     }
 
     @Override
@@ -48,6 +50,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
 
+        // ... (Código para obter attrs e criar/atualizar o usuário, que está correto)
+        
         // Suporta OIDC e OAuth2 “puro”
         Map<String, Object> attrs;
         Object principal = authentication.getPrincipal();
@@ -83,18 +87,38 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // Gera JWT
         String token = jwtUtils.generateJwtToken(UserDetailsImpl.build(user), user.getUsername());
 
-        // Se a URL do front foi configurada, REDIRECIONA com o token.
-        if (frontendCallback != null && !frontendCallback.isBlank()) {
+        // =========================================================================
+        // LÓGICA DE REDIRECIONAMENTO CONDICIONAL (CORRIGIDA)
+        // =========================================================================
+        
+        String callbackUri = null;
+        
+        // 1. Tenta identificar o destino (Web ou Mobile) através de um parâmetro de requisição
+        // O parâmetro 'target_device' deve ser enviado pelo frontend/aplicativo mobile 
+        // no URL inicial de login do Google. Ex: /oauth2/authorization/google?target_device=mobile
+        String targetDevice = request.getParameter("target_device");
+        
+        if ("mobile".equalsIgnoreCase(targetDevice) && mobileCallback != null && !mobileCallback.isBlank()) {
+            // Se for explicitamente mobile e a URI mobile estiver configurada
+            callbackUri = mobileCallback;
+        } else if (frontendCallback != null && !frontendCallback.isBlank()) {
+            // Caso contrário, usa o callback padrão (WEB/Desktop)
+            callbackUri = frontendCallback;
+        }
+
+        if (callbackUri != null && !callbackUri.isBlank()) {
+            // Executa o redirecionamento
             String target = UriComponentsBuilder
-                    .fromUriString(frontendCallback)               // ex.: http://localhost:5173/oauth/callback
-                    .queryParam("token", token)                     // ou .fragment("access_token=" + token)
+                    .fromUriString(callbackUri)
+                    .queryParam("token", token)
                     .build()
                     .toUriString();
+            
             response.sendRedirect(target);
             return;
         }
 
-        // Fallback: responde JSON (útil para testes manuais)
+        // Fallback: responde JSON (se nenhuma URL de callback for encontrada/configurada)
         writeJson(response, HttpServletResponse.SC_OK, Map.of(
             "message", "Login com Google bem-sucedido",
             "name", user.getUsername(),
