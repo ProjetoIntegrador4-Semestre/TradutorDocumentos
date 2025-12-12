@@ -7,6 +7,7 @@ import { Paths, File as ExpoFile } from 'expo-file-system';
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../context/ThemeContext";
 import { translateMany, MAX_MB } from "../../lib/translate";
+import { useNotifications } from "../../lib/useNotifications";
 import { useRouter } from "expo-router";
 import { BASE_URL } from "../../lib/api";
 import { appEvents } from "../../lib/events";
@@ -225,6 +226,7 @@ export default function TranslatorScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const router = useRouter();
+  const { sendNotification } = useNotifications();
 
   const [files, setFiles] = useState<UIFile[]>([]);
   const [target, setTarget] = useState<string>("en");
@@ -319,6 +321,15 @@ export default function TranslatorScreen() {
 
       const oks = resultsRaw.filter((r) => r.ok).length;
       const fails = resultsRaw.length - oks;
+      
+      // Envia notificação
+      if (oks > 0) {
+        await sendNotification(
+          '✅ Tradução Concluída!',
+          `${oks} arquivo(s) traduzido(s) com sucesso!`
+        );
+      }
+      
       Alert.alert(t('common.success'), `${oks} ${t('translator.completedMessage').replace('arquivo(s) traduzido(s), erro(s).', `arquivo(s) traduzido(s), ${fails} erro(s).`)}`);
     } finally {
       setLoading(false);
