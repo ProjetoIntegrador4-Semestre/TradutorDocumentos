@@ -1,0 +1,91 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [ main, feature/integration-back-frontend ]
+    paths: [ "backendJava/**", ".github/workflows/backend-deploy.yml" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: Build with Maven
+        working-directory: ./backendJava
+        run: mvn clean package -DskipTests
+      
+      - name: Run tests
+        working-directory: ./backendJava
+        run: mvn test
+
+  build-and-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backendJava
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:buildcache,mode=max
+
+  deploy-to-ec2:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /app/tradutor-documentos || mkdir -p /app/tradutor-documentos && cd /app/tradutor-documentos
+            
+            # Atualiza o repositório
+            git pull origin main || git clone https://github.com/ProjetoIntegrador4-Semestre/TradutorDocumentos.git .
+            
+            # Atualiza a variável de ambiente (se necessário)
+            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            export DOCKER_IMAGE_TAG=${{ github.sha }}
+            
+            # Substitui a tag da imagem no docker-compose
+            sed -i "s|image: .*tradutor-backend.*|image: $DOCKERHUB_USERNAME/tradutor-backend:latest|g" backendJava/docker-compose.yml
+            
+            # Reinicia os containers
+            cd backendJava
+            docker-compose down
+            docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
+            docker-compose up -d
+            
+            # Aguarda o container subir
+            sleep 10
+            
+            # Valida se a API está respondendo
+            curl -f http://localhost:8080/health || exit 1
