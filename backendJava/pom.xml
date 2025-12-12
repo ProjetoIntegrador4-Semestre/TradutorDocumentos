@@ -81,11 +81,6 @@
       <artifactId>flyway-core</artifactId>
       <version>11.9.1</version>
     </dependency>
-    <dependency>
-      <groupId>org.flywaydb</groupId>
-      <artifactId>flyway-database-postgresql</artifactId>
-      <version>11.9.1</version>
-    </dependency>
 
     <!-- JWT -->
     <dependency>
@@ -161,6 +156,12 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <scope>test</scope>
+</dependency>
 
   <build>
     <plugins>
