@@ -1,5 +1,4 @@
 name: Deploy Backend
-
 on:
   push:
     branches: [ main, develop ]
@@ -8,6 +7,23 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    
+    # ADICIONA O SERVIÇO POSTGRESQL
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: translator
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
       - uses: actions/checkout@v3
       
@@ -18,13 +34,42 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
+      # INSTALA O CLIENTE POSTGRESQL
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      
+      # AGUARDA O POSTGRES FICAR PRONTO
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U app; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+      
+      # TESTA A CONEXÃO
+      - name: Test Database Connection
+        run: |
+          PGPASSWORD=app psql -h localhost -U app -d translator -c "SELECT version();"
+      
+      # EXECUTA OS TESTES COM AS VARIÁVEIS DE AMBIENTE
+      - name: Run tests
+        working-directory: ./backendJava
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/translator
+          SPRING_DATASOURCE_USERNAME: app
+          SPRING_DATASOURCE_PASSWORD: app
+          SPRING_PROFILES_ACTIVE: test
+          JWT_SECRET: IntrMvLCt0wNl8AhgqtP017Y5vkvh4WgfLfsULHhN2MFAhjWcbKD5BXikOF7mf85UI
+          LIBRE_BASE_URL: http://localhost:5000
+        run: mvn test
+      
+      # BUILD SOMENTE SE OS TESTES PASSAREM
       - name: Build with Maven
         working-directory: ./backendJava
         run: mvn clean package -DskipTests
-      
-      - name: Run tests
-        working-directory: ./backendJava
-        run: mvn test
 
   build-and-push:
     needs: build-and-test
@@ -84,6 +129,11 @@ jobs:
             docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
             docker-compose up -d
             
+            # Aguarda o container subir
+            sleep 10
+            
+            # Valida se a API está respondendo
+            curl -f http://localhost:8080/health || exit 1
             # Aguarda o container subir
             sleep 10
             
