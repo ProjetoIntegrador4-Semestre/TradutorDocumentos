@@ -1,24 +1,31 @@
-Relatório de Testes E2E com Cypress
-📋 Sumário Executivo
-Este relatório documenta a implementação de testes end-to-end (E2E) utilizando o framework Cypress para a aplicação TranslatorPage, uma interface web para tradução de documentos.
-Período de Desenvolvimento: Dezembro de 2024
-Framework: Cypress
-Aplicação Testada: TranslatorPage (React + Material-UI)
-Ambiente: https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com
+# 📋 Relatório de Testes E2E com Cypress
 
-🎯 Objetivos dos Testes
+Este relatório documenta a implementação de testes end-to-end (E2E) utilizando o framework Cypress para a aplicação **TranslatorPage**, uma interface web para tradução de documentos.
+
+**Framework:** Cypress  
+**Aplicação Testada:** TranslatorPage (React + Material-UI)  
+**Ambiente:** `https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com`
+
+---
+
+## 🎯 Objetivos dos Testes
+
 Os testes foram desenvolvidos para garantir:
 
-Funcionalidade de Upload - Verificar seleção e exibição de arquivos
-Validação de Formulário - Garantir que botões sejam desabilitados quando necessário
-Integração com API - Testar comunicação com backend de tradução
-Preview de Documentos - Validar visualização de PDFs traduzidos
-Download de Arquivos - Confirmar funcionalidade de download
-Navegação e UX - Testar fluxos de usuário completos
+1. **Funcionalidade de Upload** - Verificar seleção e exibição de arquivos
+2. **Validação de Formulário** - Garantir que botões sejam desabilitados quando necessário
+3. **Integração com API** - Testar comunicação com backend de tradução
+4. **Preview de Documentos** - Validar visualização de PDFs traduzidos
+5. **Download de Arquivos** - Confirmar funcionalidade de download
+6. **Navegação e UX** - Testar fluxos de usuário completos
 
+---
 
-🏗️ Arquitetura de Testes
-Estrutura de Arquivos
+## 🏗️ Arquitetura de Testes
+
+### Estrutura de Arquivos
+
+```
 cypress/
 ├── e2e/
 │   └── translatorPage.cy.tsx       # Suite de testes principal
@@ -27,42 +34,65 @@ cypress/
 │   └── translated.pdf              # Resposta mock da API
 └── support/
     └── commands.ts                 # Comandos customizados (cy.login)
-Configuração Inicial
-Cada teste executa as seguintes etapas no beforeEach:
-typescriptbeforeEach(() => {
+```
+
+### Configuração Inicial
+
+Cada teste executa as seguintes etapas no `beforeEach`:
+
+```typescript
+beforeEach(() => {
   cy.login();                                    // Autentica o usuário
   cy.visit('/tradutor', { failOnStatusCode: false }); // Navega para a página
 });
-Nota: A opção failOnStatusCode: false foi necessária devido a redirecionamentos 301 no ambiente de staging.
+```
 
-🧪 Casos de Teste Implementados
-1. Seleção de Arquivo
-Objetivo: Verificar que o usuário pode selecionar um arquivo e que ele é exibido corretamente.
-typescriptit('Testes para permitir selecionar um arquivo', () => {
+**Nota:** A opção `failOnStatusCode: false` foi necessária devido a redirecionamentos 301 no ambiente de staging.
+
+---
+
+## 🧪 Casos de Teste Implementados
+
+### 1. Seleção de Arquivo
+
+**Objetivo:** Verificar que o usuário pode selecionar um arquivo e que ele é exibido corretamente.
+
+```typescript
+it('Testes para permitir selecionar um arquivo', () => {
   cy.get('input[type="file"]').attachFile('sample.pdf');
   cy.contains('Selecionado: sample.pdf').should('exist');
 });
-Resultado Esperado:
+```
 
-✅ Input aceita o arquivo
-✅ Chip com nome do arquivo é exibido
-✅ Status muda para "Pronto para traduzir"
+**Resultado Esperado:**
+- ✅ Input aceita o arquivo
+- ✅ Chip com nome do arquivo é exibido
+- ✅ Status muda para "Pronto para traduzir"
 
+---
 
-2. Validação de Botão Desabilitado
-Objetivo: Garantir que o botão "Traduzir" permaneça desabilitado quando não há arquivo selecionado.
-typescriptit('Testes para manter o botão Traduzir desabilitado sem arquivo', () => {
+### 2. Validação de Botão Desabilitado
+
+**Objetivo:** Garantir que o botão "Traduzir" permaneça desabilitado quando não há arquivo selecionado.
+
+```typescript
+it('Testes para manter o botão Traduzir desabilitado sem arquivo', () => {
   cy.get('[data-testid="translate-button"]').should('be.disabled');
 });
-Resultado Esperado:
+```
 
-✅ Botão está desabilitado ao carregar a página
-✅ Impede envio acidental sem arquivo
+**Resultado Esperado:**
+- ✅ Botão está desabilitado ao carregar a página
+- ✅ Impede envio acidental sem arquivo
 
+---
 
-3. Tradução com Sucesso
-Objetivo: Simular uma tradução bem-sucedida e verificar a resposta da aplicação.
-typescriptit('Testes para realizar a tradução com sucesso', () => {
+### 3. Tradução com Sucesso
+
+**Objetivo:** Simular uma tradução bem-sucedida e verificar a resposta da aplicação.
+
+```typescript
+it('Testes para realizar a tradução com sucesso', () => {
   cy.intercept('POST', 'https://tradudoc.duckdns.org/translate-file', {
     statusCode: 200,
     fixture: 'translated.pdf',
@@ -75,16 +105,21 @@ typescriptit('Testes para realizar a tradução com sucesso', () => {
 
   cy.contains('Tradução concluída').should('exist');
 });
-Resultado Esperado:
+```
 
-✅ Requisição POST é enviada
-✅ Status muda para "Tradução concluída"
-✅ Arquivo traduzido é recebido
+**Resultado Esperado:**
+- ✅ Requisição POST é enviada
+- ✅ Status muda para "Tradução concluída"
+- ✅ Arquivo traduzido é recebido
 
+---
 
-4. Preview de PDF
-Objetivo: Verificar que PDFs traduzidos são exibidos em um iframe de preview.
-typescriptit('Testes para exibir o preview do PDF após tradução', () => {
+### 4. Preview de PDF
+
+**Objetivo:** Verificar que PDFs traduzidos são exibidos em um iframe de preview.
+
+```typescript
+it('Testes para exibir o preview do PDF após tradução', () => {
   cy.intercept('POST', 'https://tradudoc.duckdns.org/translate-file', {
     statusCode: 200,
     fixture: 'translated.pdf',
@@ -97,16 +132,21 @@ typescriptit('Testes para exibir o preview do PDF após tradução', () => {
 
   cy.get('iframe[title="Pré-visualização do PDF"]').should('exist');
 });
-Resultado Esperado:
+```
 
-✅ Iframe é renderizado
-✅ Blob URL é carregado no src do iframe
-✅ PDF é visível para o usuário
+**Resultado Esperado:**
+- ✅ Iframe é renderizado
+- ✅ Blob URL é carregado no src do iframe
+- ✅ PDF é visível para o usuário
 
+---
 
-5. Seleção de Idioma
-Objetivo: Testar a funcionalidade de mudança de idioma de destino.
-typescriptit('Testes para permitir trocar o idioma de destino', () => {
+### 5. Seleção de Idioma
+
+**Objetivo:** Testar a funcionalidade de mudança de idioma de destino.
+
+```typescript
+it('Testes para permitir trocar o idioma de destino', () => {
   cy.intercept('GET', '**/languages').as('langs');
   cy.wait('@langs');
 
@@ -114,16 +154,21 @@ typescriptit('Testes para permitir trocar o idioma de destino', () => {
   cy.contains('li', 'English (en)').click();
   cy.get('.MuiSelect-select').should('contain.text', 'English (en)');
 });
-Resultado Esperado:
+```
 
-✅ Lista de idiomas é carregada da API
-✅ Select abre e exibe opções
-✅ Idioma selecionado é atualizado
+**Resultado Esperado:**
+- ✅ Lista de idiomas é carregada da API
+- ✅ Select abre e exibe opções
+- ✅ Idioma selecionado é atualizado
 
+---
 
-6. Abertura em Nova Aba
-Objetivo: Verificar que PDFs podem ser abertos em nova aba do navegador.
-typescriptit('Testes para abrir o PDF traduzido em nova aba', () => {
+### 6. Abertura em Nova Aba
+
+**Objetivo:** Verificar que PDFs podem ser abertos em nova aba do navegador.
+
+```typescript
+it('Testes para abrir o PDF traduzido em nova aba', () => {
   cy.intercept('POST', 'https://tradudoc.duckdns.org/translate-file', {
     statusCode: 200,
     fixture: 'translated.pdf',
@@ -143,16 +188,21 @@ typescriptit('Testes para abrir o PDF traduzido em nova aba', () => {
   cy.contains('button', 'Abrir em nova aba').click();
   cy.get('@windowOpen').should('have.been.calledOnce');
 });
-Resultado Esperado:
+```
 
-✅ Botão "Abrir em nova aba" é visível
-✅ window.open() é chamado com URL correta
-✅ Nova aba seria aberta (simulado via stub)
+**Resultado Esperado:**
+- ✅ Botão "Abrir em nova aba" é visível
+- ✅ `window.open()` é chamado com URL correta
+- ✅ Nova aba seria aberta (simulado via stub)
 
+---
 
-7. Download de PDF
-Objetivo: Testar a funcionalidade de download de arquivos traduzidos.
-typescriptit('Testes para fazer o download do arquivo traduzido', () => {
+### 7. Download de PDF
+
+**Objetivo:** Testar a funcionalidade de download de arquivos traduzidos.
+
+```typescript
+it('Testes para fazer o download do arquivo traduzido', () => {
   cy.intercept('POST', 'https://tradudoc.duckdns.org/translate-file', {
     statusCode: 200,
     fixture: 'translated.pdf',
@@ -173,17 +223,22 @@ typescriptit('Testes para fazer o download do arquivo traduzido', () => {
     expect(doc.querySelector('a[download]')).to.not.exist;
   });
 });
-Resultado Esperado:
+```
 
-✅ Botão "Baixar" está disponível
-✅ Elemento <a> é criado temporariamente
-✅ Download é iniciado
-✅ Elemento <a> é removido após download
+**Resultado Esperado:**
+- ✅ Botão "Baixar" está disponível
+- ✅ Elemento `<a>` é criado temporariamente
+- ✅ Download é iniciado
+- ✅ Elemento `<a>` é removido após download
 
+---
 
-8. Download de Arquivo Não-PDF
-Objetivo: Validar download de arquivos que não são PDFs (DOCX, TXT, etc).
-typescriptit('Testes para fazer o download de arquivo traduzido não-PDF', () => {
+### 8. Download de Arquivo Não-PDF
+
+**Objetivo:** Validar download de arquivos que não são PDFs (DOCX, TXT, etc).
+
+```typescript
+it('Testes para fazer o download de arquivo traduzido não-PDF', () => {
   cy.intercept('POST', 'https://tradudoc.duckdns.org/translate-file', {
     statusCode: 200,
     body: 'Conteúdo traduzido do documento',
@@ -201,16 +256,21 @@ typescriptit('Testes para fazer o download de arquivo traduzido não-PDF', () =>
   cy.contains('button', 'Baixar arquivo traduzido').should('exist').and('be.visible');
   cy.contains('button', 'Baixar arquivo traduzido').click();
 });
-Resultado Esperado:
+```
 
-✅ Mensagem de sucesso sem preview
-✅ Botão de download é exibido
-✅ Download funciona para formatos não-PDF
+**Resultado Esperado:**
+- ✅ Mensagem de sucesso sem preview
+- ✅ Botão de download é exibido
+- ✅ Download funciona para formatos não-PDF
 
+---
 
-9. Verificação de Conteúdo do Iframe
-Objetivo: Garantir que o iframe carrega o PDF corretamente com blob URL.
-typescriptit('Testes para verificar que o iframe carrega o PDF corretamente', () => {
+### 9. Verificação de Conteúdo do Iframe
+
+**Objetivo:** Garantir que o iframe carrega o PDF corretamente com blob URL.
+
+```typescript
+it('Testes para verificar que o iframe carrega o PDF corretamente', () => {
   cy.intercept('POST', 'https://tradudoc.duckdns.org/translate-file', {
     statusCode: 200,
     fixture: 'translated.pdf',
@@ -226,16 +286,21 @@ typescriptit('Testes para verificar que o iframe carrega o PDF corretamente', ()
     .and('have.attr', 'src')
     .and('include', 'blob:');
 });
-Resultado Esperado:
+```
 
-✅ Iframe existe no DOM
-✅ Atributo src contém URL blob válida
-✅ PDF é carregado para visualização
+**Resultado Esperado:**
+- ✅ Iframe existe no DOM
+- ✅ Atributo `src` contém URL blob válida
+- ✅ PDF é carregado para visualização
 
+---
 
-10. Botão "Nova Tradução"
-Objetivo: Testar a limpeza do estado ao iniciar nova tradução.
-typescriptit('Testes para limpar resultado ao clicar em "Nova tradução"', () => {
+### 10. Botão "Nova Tradução"
+
+**Objetivo:** Testar a limpeza do estado ao iniciar nova tradução.
+
+```typescript
+it('Testes para limpar resultado ao clicar em "Nova tradução"', () => {
   cy.intercept('POST', 'https://tradudoc.duckdns.org/translate-file', {
     statusCode: 200,
     fixture: 'translated.pdf',
@@ -252,16 +317,21 @@ typescriptit('Testes para limpar resultado ao clicar em "Nova tradução"', () =
   cy.get('iframe[title="Pré-visualização do PDF"]').should('not.exist');
   cy.contains('Aguardando arquivo').should('exist');
 });
-Resultado Esperado:
+```
 
-✅ Preview é removido
-✅ Estado volta para "Aguardando arquivo"
-✅ Formulário está pronto para nova tradução
+**Resultado Esperado:**
+- ✅ Preview é removido
+- ✅ Estado volta para "Aguardando arquivo"
+- ✅ Formulário está pronto para nova tradução
 
+---
 
-11. Botão "Fechar"
-Objetivo: Verificar que o botão "Fechar" remove o preview.
-typescriptit('Testes para fechar o preview ao clicar em "Fechar"', () => {
+### 11. Botão "Fechar"
+
+**Objetivo:** Verificar que o botão "Fechar" remove o preview.
+
+```typescript
+it('Testes para fechar o preview ao clicar em "Fechar"', () => {
   cy.intercept('POST', 'https://tradudoc.duckdns.org/translate-file', {
     statusCode: 200,
     fixture: 'translated.pdf',
@@ -277,52 +347,79 @@ typescriptit('Testes para fechar o preview ao clicar em "Fechar"', () => {
 
   cy.get('iframe[title="Pré-visualização do PDF"]').should('not.exist');
 });
-Resultado Esperado:
+```
 
-✅ Botão "Fechar" está visível
-✅ Preview é removido ao clicar
-✅ Estado é resetado
+**Resultado Esperado:**
+- ✅ Botão "Fechar" está visível
+- ✅ Preview é removido ao clicar
+- ✅ Estado é resetado
 
+---
 
-📊 Cobertura de Testes
-FuncionalidadeStatusPrioridadeUpload de arquivo✅ TestadoAltaValidação de formulário✅ TestadoAltaTradução via API✅ TestadoAltaPreview de PDF✅ TestadoAltaSeleção de idioma✅ TestadoMédiaAbertura em nova aba✅ TestadoMédiaDownload de PDF✅ TestadoAltaDownload de outros formatos✅ TestadoMédiaVerificação de iframe✅ TestadoBaixaBotão "Nova tradução"✅ TestadoMédiaBotão "Fechar"✅ TestadoMédia
-Cobertura Total: 11 casos de teste implementados
+## 📊 Cobertura de Testes
 
-🛠️ Técnicas Utilizadas
-1. Mocking de APIs com cy.intercept()
-Todos os testes utilizam interceptação de requisições HTTP para simular respostas da API:
-typescriptcy.intercept('POST', 'https://tradudoc.duckdns.org/translate-file', {
-  statusCode: 200,
-  fixture: 'translated.pdf',
-  headers: { 'content-type': 'application/pdf' }
-}).as('translateFile');
-Vantagens:
+| Funcionalidade | Status | Prioridade |
+|---|---|---|
+| Upload de arquivo | ✅ Testado | Alta |
+| Validação de formulário | ✅ Testado | Alta |
+| Tradução via API | ✅ Testado | Alta |
+| Preview de PDF | ✅ Testado | Alta |
+| Seleção de idioma | ✅ Testado | Média |
+| Abertura em nova aba | ✅ Testado | Média |
+| Download de PDF | ✅ Testado | Alta |
+| Download de outros formatos | ✅ Testado | Média |
+| Verificação de iframe | ✅ Testado | Baixa |
+| Botão "Nova tradução" | ✅ Testado | Média |
+| Botão "Fechar" | ✅ Testado | Média |
 
-Testes rápidos e confiáveis
-Sem dependência de backend
-Controle total sobre respostas
+**Cobertura Total:** 11 casos de teste implementados
 
+---
 
-2. Upload de Arquivos com cypress-file-upload
-Plugin utilizado para simular seleção de arquivos:
-typescriptcy.get('input[type="file"]').attachFile('sample.pdf');
-Instalação:
-bashnpm install --save-dev cypress-file-upload
+### 3. Stub de Funções do Window
 
-3. Stub de Funções do Window
 Para testar abertura de novas abas sem realmente abrir:
-typescriptcy.window().then((win) => {
+
+```typescript
+cy.window().then((win) => {
   cy.stub(win, 'open').as('windowOpen');
 });
 cy.get('@windowOpen').should('have.been.calledOnce');
+```
 
-4. Espera por Requisições Assíncronas
+---
+
+### 4. Espera por Requisições Assíncronas
+
 Uso de aliases para aguardar conclusão de chamadas:
-typescriptcy.wait('@translateFile');
-cy.wait('@langs');
 
-5. Seletores Customizados
-Utilização de data-testid para seletores estáveis:
-typescriptcy.get('[data-testid="translate-button"]')
+```typescript
+cy.wait('@translateFile');
+cy.wait('@langs');
+```
+
+---
+
+### 5. Seletores Customizados
+
+Utilização de `data-testid` para seletores estáveis:
+
+```typescript
+cy.get('[data-testid="translate-button"]')
 cy.get('[data-testid="error-message"]')
 cy.get('[data-testid="file-chip"]')
+```
+
+---
+
+
+## 📚 Referências
+
+- [Cypress Documentation](https://docs.cypress.io)
+- [cypress-file-upload Plugin](https://github.com/abramenal/cypress-file-upload)
+- [Material-UI Testing Guide](https://mui.com/material-ui/guides/testing/)
+- [Best Practices for E2E Testing](https://docs.cypress.io/guides/references/best-practices)
+
+---
+
+**Status Final:** ✅ **Todos os testes passando**
