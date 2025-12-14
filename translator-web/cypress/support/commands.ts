@@ -3,10 +3,10 @@ import 'cypress-file-upload';
 Cypress.Commands.add("login", () => {
   cy.request({
     method: "POST",
-    url: "http://100.30.34.113:8080/api/auth/signin",
+    url: "https://tradudoc.duckdns.org/api/auth/signin",
     body: {
-      email: "teste1@example.com",
-      password: "12345678",
+      email: "admin@admin.com",
+      password: "admin",
     },
     failOnStatusCode: false,
   }).then((resp) => {
