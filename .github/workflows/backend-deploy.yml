@@ -1,14 +1,17 @@
 name: Deploy Backend
+
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, feature/integration-back-frontend ]
     paths: [ "backendJava/**", ".github/workflows/backend-deploy.yml" ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     
-    # ADICIONA O SERVIÇO POSTGRESQL
+    # ========================================
+    # ADICIONA POSTGRESQL COMO SERVIÇO DO CI
+    # ========================================
     services:
       postgres:
         image: postgres:15
@@ -34,39 +37,45 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
-      # INSTALA O CLIENTE POSTGRESQL
-      - name: Install PostgreSQL Client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-      
-      # AGUARDA O POSTGRES FICAR PRONTO
+      # ========================================
+      # AGUARDA O BANCO ESTAR PRONTO
+      # ========================================
       - name: Wait for PostgreSQL to be ready
         run: |
-          until pg_isready -h localhost -p 5432 -U app; do
-            echo "Waiting for PostgreSQL..."
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            nc -z localhost 5432 && echo "✅ PostgreSQL is ready!" && break
+            echo "⏳ Attempt $i/30: PostgreSQL not ready yet..."
             sleep 2
           done
-          echo "PostgreSQL is ready!"
+          
+          # Verifica se realmente conectou
+          if ! nc -z localhost 5432; then
+            echo "❌ PostgreSQL failed to start!"
+            exit 1
+          fi
       
-      # TESTA A CONEXÃO
-      - name: Test Database Connection
-        run: |
-          PGPASSWORD=app psql -h localhost -U app -d translator -c "SELECT version();"
-      
-      # EXECUTA OS TESTES COM AS VARIÁVEIS DE AMBIENTE
+      # ========================================
+      # EXECUTA OS TESTES COM DB CONFIGURADO
+      # ========================================
       - name: Run tests
         working-directory: ./backendJava
         env:
+          # Sobrescreve a URL do banco (no seu properties está db:5432, mas no CI é localhost:5432)
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/translator
           SPRING_DATASOURCE_USERNAME: app
           SPRING_DATASOURCE_PASSWORD: app
           SPRING_PROFILES_ACTIVE: test
-          JWT_SECRET: IntrMvLCt0wNl8AhgqtP017Y5vkvh4WgfLfsULHhN2MFAhjWcbKD5BXikOF7mf85UI
+          # Variáveis adicionais necessárias
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           LIBRE_BASE_URL: http://localhost:5000
         run: mvn test
       
-      # BUILD SOMENTE SE OS TESTES PASSAREM
+      # ========================================
+      # BUILD APÓS TESTES PASSAREM
+      # ========================================
       - name: Build with Maven
         working-directory: ./backendJava
         run: mvn clean package -DskipTests
@@ -129,11 +138,6 @@ jobs:
             docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
             docker-compose up -d
             
-            # Aguarda o container subir
-            sleep 10
-            
-            # Valida se a API está respondendo
-            curl -f http://localhost:8080/health || exit 1
             # Aguarda o container subir
             sleep 10
             
