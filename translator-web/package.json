@@ -37,7 +37,7 @@
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/ui": "^4.0.8",
-    "cypress": "^15.7.0",
+    "cypress": "^15.7.1",
     "cypress-file-upload": "^5.0.8",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
