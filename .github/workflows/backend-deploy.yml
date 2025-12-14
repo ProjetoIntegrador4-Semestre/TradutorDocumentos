@@ -71,7 +71,7 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           LIBRE_BASE_URL: http://localhost:5000
-        run: mvn test -e
+        run: mvn test -X
       
       # ========================================
       # BUILD APÓS TESTES PASSAREM
