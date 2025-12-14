@@ -9,6 +9,7 @@ services:
     volumes:
       - ./data:/data
       - ./letsencrypt:/etc/letsencrypt
+
   libretranslate:
     image: libretranslate/libretranslate:latest
     ports:
@@ -19,7 +20,7 @@ services:
     command: ["--host", "0.0.0.0"]
 
   db:
-    image: postgres:16
+    image: postgres:15
     container_name: translator-db
     restart: always
     environment:
@@ -30,6 +31,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d translator"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -49,22 +55,63 @@ services:
       dockerfile: Dockerfile
     container_name: backend-java
     depends_on:
-      - libretranslate
-      - db
+      db:
+        condition: service_healthy
+      libretranslate:
+        condition: service_started
     ports:
       - "8080:8080"
     environment:
-      APP_BOOT_TOKEN: public-dev-boot-token-CHANGE_ME
-      LIBRE_BASE_URL: http://libretranslate:5000
+      # ============================
+      # BANCO DE DADOS
+      # ============================
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/translator
       SPRING_DATASOURCE_USERNAME: app
       SPRING_DATASOURCE_PASSWORD: app
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
-      JWT_SECRET: IntrMvLCt0wNl8AhgqtP017Y5vkvh4WgfLfsULHhN2MFAhjWcbKD5BXikOF7mf85
+      
+      # ============================
+      # FLYWAY - DESABILITADO
+      # ============================
+      SPRING_FLYWAY_ENABLED: false
+      
+      # ============================
+      # LIBREOFFICE
+      # ============================
+      LIBRE_BASE_URL: http://libretranslate:5000
+      
+      # ============================
+      # JWT
+      # ============================
+      JWT_SECRET: IntrMvLCt0wNl8AhgqtP017Y5vkvh4WgfLfsULHhN2MFAhjWcbKD5BXikOF7mf85UI
+      JWT_ACCESS_TOKEN_MINUTES: 60
+      JWT_EXPIRATION: 3600000
+      
+      # ============================
+      # GOOGLE OAUTH2
+      # ============================
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID: 440964714329-kr38n86psbtkp8sn15f53vivh6o407ed.apps.googleusercontent.com
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET: 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
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_SCOPE: openid,profile,email
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: https://tradudoc.duckdns.org/login/oauth2/code/google
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_NAME: Google
+      
+      # ============================
+      # CONFIGURAÇÕES GERAIS
+      # ============================
+      APP_BOOT_TOKEN: public-dev-boot-token-CHANGE_ME
       APP_OAUTH2_REDIRECT_URI: https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com//oauth/callback
+      APP_RESET_EXPMINUTES: 30
+      APP_FRONTEND_RESET_PATH: /reset-password
       SERVER_FORWARD_HEADERS_STRATEGY: native
-
+      SERVER_PORT: 8080
+      
+      # ============================
+      # LOGGING (OPCIONAL - DESCOMENTE SE PRECISAR DEBUG)
+      # ============================
+      # LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: DEBUG
+    
     volumes:
       - ../data:/app/data
 
