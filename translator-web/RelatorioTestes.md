@@ -35,7 +35,21 @@ cypress/
 └── support/
     └── commands.ts                 # Comandos customizados (cy.login)
 ```
+---
 
+### ⚙️ Instalação e Execução
+
+Isso instalará o Cypress localmente como uma dependência de desenvolvimento para o seu projeto.
+```
+npm install cypress --save-dev
+```
+
+Isso inicia o aplicativo Cypress para que você possa escolher entre testes de ponta a ponta (E2E) ou testes de componente (CT) e começar a escrever testes.
+```
+npx cypress open
+```
+
+---
 ### Configuração Inicial
 
 Cada teste executa as seguintes etapas no `beforeEach`:
