@@ -32,9 +32,10 @@ build/
 ### VS Code ###
 .vscode/
 
-application.properties
 /data/
 .idea/
 *.iml
 
 settings.json
+
+node_modules

@@ -1,0 +1,145 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [ main, develop, feature/integration-back-frontend ]
+    paths: [ "backendJava/**", ".github/workflows/backend-deploy.yml" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    # ========================================
+    # ADICIONA POSTGRESQL COMO SERVIÇO DO CI
+    # ========================================
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: translator
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      
+      # ========================================
+      # AGUARDA O BANCO ESTAR PRONTO
+      # ========================================
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            nc -z localhost 5432 && echo "✅ PostgreSQL is ready!" && break
+            echo "⏳ Attempt $i/30: PostgreSQL not ready yet..."
+            sleep 2
+          done
+          
+          # Verifica se realmente conectou
+          if ! nc -z localhost 5432; then
+            echo "❌ PostgreSQL failed to start!"
+            exit 1
+          fi
+      
+      # ========================================
+      # EXECUTA OS TESTES COM DB CONFIGURADO
+      # ========================================
+      - name: Run tests
+        working-directory: ./backendJava
+        env:
+          # Sobrescreve a URL do banco (no seu properties está db:5432, mas no CI é localhost:5432)
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/translator
+          SPRING_DATASOURCE_USERNAME: app
+          SPRING_DATASOURCE_PASSWORD: app
+          SPRING_PROFILES_ACTIVE: test
+          # Variáveis adicionais necessárias
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          LIBRE_BASE_URL: http://localhost:5000
+        run: mvn test -X
+      
+      # ========================================
+      # BUILD APÓS TESTES PASSAREM
+      # ========================================
+      - name: Build with Maven
+        working-directory: ./backendJava
+        run: mvn clean package -DskipTests
+
+  build-and-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backendJava
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:buildcache,mode=max
+
+  deploy-to-ec2:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /app/tradutor-documentos || mkdir -p /app/tradutor-documentos && cd /app/tradutor-documentos
+            
+            # Atualiza o repositório
+            git pull origin main || git clone https://github.com/ProjetoIntegrador4-Semestre/TradutorDocumentos.git .
+            
+            # Atualiza a variável de ambiente (se necessário)
+            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            export DOCKER_IMAGE_TAG=${{ github.sha }}
+            
+            # Substitui a tag da imagem no docker-compose
+            sed -i "s|image: .*tradutor-backend.*|image: $DOCKERHUB_USERNAME/tradutor-backend:latest|g" backendJava/docker-compose.yml
+            
+            # Reinicia os containers
+            cd backendJava
+            docker-compose down
+            docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
+            docker-compose up -d
+            
+            # Aguarda o container subir
+            sleep 10
+            
+            # Valida se a API está respondendo
+            curl -f http://localhost:8080/health || exit 1
