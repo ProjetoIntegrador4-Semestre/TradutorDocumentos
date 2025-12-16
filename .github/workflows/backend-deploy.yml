@@ -139,7 +139,8 @@ jobs:
             # ================================================
             if [ -d .git ]; then
               echo "Atualizando repositório existente..."
-              git pull origin develop # Usando 'develop' baseado no seu último log
+              # NOVO: Tenta fast-forward. Se falhar, tenta rebase (mais agressivo).
+              git pull --ff-only origin develop || git pull --rebase origin develop
             else
               echo "Clonando repositório..."
               git clone $REPO_URL .
