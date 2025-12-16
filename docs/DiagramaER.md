@@ -3,22 +3,35 @@
 ```mermaid
 erDiagram
   USERS {
-    int id PK
+    bigint id PK
+    varchar username
     varchar email UK
-    varchar password_hash
+    varchar password
     varchar role
-    timestamptz created_at
+    boolean enabled
   }
 
   TRANSLATION_RECORDS {
-    int id PK
-    int user_id FK
+    bigint id PK
+    bigint user_id FK
     varchar original_filename
     varchar file_type
     varchar detected_lang
     varchar target_lang
-    timestamptz created_at
+    bigint file_size_bytes
+    varchar output_path
+    timestamp created_at
+  }
+
+  PASSWORD_RESET_TOKENS {
+    bigint id PK
+    bigint user_id FK
+    varchar token_hash UK
+    timestamp expires_at
+    boolean used
+    timestamp created_at
   }
 
   USERS ||--o{ TRANSLATION_RECORDS : "owns"
+  USERS ||--o{ PASSWORD_RESET_TOKENS : "has"
 ```
