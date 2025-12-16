@@ -337,7 +337,7 @@ export default function HistoryPage() {
 
           {/* Tabela */}
           <TableContainer>
-            <Table size="small">
+            <Table size="small" sx={{ tableLayout: "fixed" }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Documento</TableCell>
