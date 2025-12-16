@@ -109,8 +109,10 @@ services:
       # ============================
       # CONFIGURAÇÕES GERAIS
       # ============================
-      APP_BOOT_TOKEN: ${APP_BOOT_TOKEN:-public-dev-boot-token-CHANGE_ME}
-      APP_OAUTH2_REDIRECT_URI: ${APP_OAUTH2_REDIRECT_URI:-https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com/oauth/callback}
+
+      APP_BOOT_TOKEN: public-dev-boot-token-CHANGE_ME
+      APP_OAUTH2_REDIRECT_URI: https://develop.dosskyq5aktr1.amplifyapp.com//oauth/callback
+      
       APP_RESET_EXPMINUTES: 30
       APP_FRONTEND_RESET_PATH: /reset-password
       SERVER_FORWARD_HEADERS_STRATEGY: native
