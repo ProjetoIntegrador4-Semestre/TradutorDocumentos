@@ -119,12 +119,11 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          # INÍCIO DO SCRIPT CORRIGIDO
           script: |
             # ================================================
             # 1. SETUP DE DIRETÓRIOS E VARIÁVEIS DE AMBIENTE
             # ================================================
-            # Define variáveis de shell usando a sintaxe segura
+            # Usando variáveis separadas para segurança e clareza
             TARGET_USER=${{ secrets.EC2_USER }}
             TARGET_DIR="/home/$TARGET_USER/tradutor-documentos"
             REPO_URL="https://github.com/ProjetoIntegrador4-Semestre/TradutorDocumentos.git"
@@ -140,7 +139,7 @@ jobs:
             # ================================================
             if [ -d .git ]; then
               echo "Atualizando repositório existente..."
-              git pull origin ${{ github.ref_name }} # Usa a branch atual
+              git pull origin develop # Usando 'develop' baseado no seu último log
             else
               echo "Clonando repositório..."
               git clone $REPO_URL .
@@ -149,15 +148,15 @@ jobs:
             # ================================================
             # 3. DEPLOY DOCKER
             # ================================================
-            # Substitui a tag da imagem no docker-compose
-            sed -i "s|image: .*tradutor-backend.*|image: $DOCKERHUB_USERNAME/tradutor-backend:latest|g" backendJava/docker-compose.yml
+            # CORREÇÃO: Removido 'backendJava/' do caminho do docker-compose.yml
+            sed -i "s|image: .*tradutor-backend.*|image: $DOCKERHUB_USERNAME/tradutor-backend:latest|g" docker-compose.yml
             
             # Puxa a nova imagem
             docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
             
-            # Reinicia os containers usando o arquivo de configuração
-            docker-compose -f backendJava/docker-compose.yml down
-            docker-compose -f backendJava/docker-compose.yml up -d
+            # CORREÇÃO: Reinicia os containers usando o caminho CORRETO
+            docker-compose -f docker-compose.yml down
+            docker-compose -f docker-compose.yml up -d
             
             # ================================================
             # 4. VALIDAÇÃO
