@@ -518,7 +518,7 @@ export default function TranslatorScreen() {
                       }}
                     >
                       <Text style={{ color: "#fff", fontWeight: "600" }}>
-                        {t('translator.openFile')}
+                        Baixar e Compartilhar
                       </Text>
                     </TouchableOpacity>
                   </View>
