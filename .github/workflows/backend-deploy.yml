@@ -6,14 +6,10 @@ on:
     paths: [ "backendJava/**", ".github/workflows/backend-deploy.yml" ]
 
 jobs:
-  # ... (O job build-and-test permanece inalterado)
-
   build-and-test:
+    # ... (Job permanece inalterado)
     runs-on: ubuntu-latest
     
-    # ========================================
-    # ADICIONA POSTGRESQL COMO SERVIÇO DO CI
-    # ========================================
     services:
       postgres:
         image: postgres:15
@@ -31,17 +27,12 @@ jobs:
     
     steps:
       - uses: actions/checkout@v3
-      
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-      
-      # ========================================
-      # AGUARDA O BANCO ESTAR PRONTO
-      # ========================================
       - name: Wait for PostgreSQL to be ready
         run: |
           echo "Waiting for PostgreSQL to be ready..."
@@ -50,55 +41,39 @@ jobs:
             echo "⏳ Attempt $i/30: PostgreSQL not ready yet..."
             sleep 2
           done
-          
-          # Verifica se realmente conectou
           if ! nc -z localhost 5432; then
             echo "❌ PostgreSQL failed to start!"
             exit 1
           fi
-      
-      # ========================================
-      # EXECUTA OS TESTES COM DB CONFIGURADO
-      # ========================================
       - name: Run tests
         working-directory: ./backendJava
         env:
-          # Sobrescreve a URL do banco (no seu properties está db:5432, mas no CI é localhost:5432)
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/translator
           SPRING_DATASOURCE_USERNAME: app
           SPRING_DATASOURCE_PASSWORD: app
           SPRING_PROFILES_ACTIVE: test
-          # Variáveis adicionais necessárias
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           LIBRE_BASE_URL: http://localhost:5000
         run: mvn test -X
-      
-      # ========================================
-      # BUILD APÓS TESTES PASSAREM
-      # ========================================
       - name: Build with Maven
         working-directory: ./backendJava
         run: mvn clean package -DskipTests
 
-  # ... (O job build-and-push permanece inalterado)
-
   build-and-push:
+    # ... (Job permanece inalterado)
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -111,55 +86,53 @@ jobs:
           cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:buildcache,mode=max
 
   # =========================================================================
-  # JOB DEPLOY CORRIGIDO
+  # JOB DEPLOY CORRIGIDO E OTIMIZADO
   # =========================================================================
   deploy-to-ec2:
-  needs: build-and-push
-  runs-on: ubuntu-latest
-  if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-  steps:
-    - uses: actions/checkout@v3 # Faz o checkout do código no runner
-      
-    - name: Deploy and Sync Files
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v3 # Apenas um checkout
         
-        # Copia o arquivo docker-compose.yml da raiz do repo local (no runner)
-        # para o diretório de destino no EC2.
-        source: "docker-compose.yml" 
-        target: "/home/${{ secrets.EC2_USER }}/tradutor-documentos/"
-        
-        script: |
-          set -e # Continua parando em erros
+      - name: Deploy and Sync Files
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          
+          # COPIA O ARQUIVO DOCKER-COMPOSE.YML (Substitui Git Pull/Sed)
+          source: "docker-compose.yml" 
+          target: "/home/${{ secrets.EC2_USER }}/tradutor-documentos/"
+          
+          script: |
+            set -e
 
-          # ================================================
-          # 1. SETUP DE DIRETÓRIOS E VARIÁVEIS DE AMBIENTE
-          # ================================================
-          TARGET_USER=${{ secrets.EC2_USER }}
-          TARGET_DIR="/home/$TARGET_USER/tradutor-documentos"
-          DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-          
-          # Cria o diretório (se não existir). O 'source' acima já garante que o arquivo está aqui.
-          mkdir -p $TARGET_DIR
-          cd $TARGET_DIR
-          
-          # ================================================
-          # 2. DEPLOY DOCKER (O arquivo docker-compose.yml JÁ ESTÁ NO TARGET_DIR)
-          # ================================================
-          
-          # NOTA: O sed não é mais necessário aqui se você usar a tag ':latest' no docker-compose.yml
-          # Se o seu docker-compose.yml usa a tag :latest, este comando é suficiente:
-          docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
-          
-          # Reinicia os containers (o docker-compose.yml foi copiado via 'source')
-          docker-compose -f docker-compose.yml down
-          docker-compose -f docker-compose.yml up -d
-          
-          # ================================================
-          # 3. VALIDAÇÃO
-          # ================================================
-          sleep 10
-          curl -f http://localhost:8080/health || exit 1
+            # ================================================
+            # 1. SETUP DE DIRETÓRIOS E VARIÁVEIS DE AMBIENTE
+            # ================================================
+            TARGET_USER=${{ secrets.EC2_USER }}
+            TARGET_DIR="/home/$TARGET_USER/tradutor-documentos"
+            DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            
+            # Cria o diretório (necessário para o 'target' do 'source' funcionar na 1ª vez)
+            mkdir -p $TARGET_DIR
+            cd $TARGET_DIR
+            
+            # ================================================
+            # 2. DEPLOY DOCKER
+            # ================================================
+            # Puxa a nova imagem (usa o :latest, já atualizado no push)
+            docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
+            
+            # Reinicia os containers (o docker-compose.yml foi copiado via 'source')
+            docker-compose -f docker-compose.yml down
+            docker-compose -f docker-compose.yml up -d
+            
+            # ================================================
+            # 3. VALIDAÇÃO
+            # ================================================
+            sleep 10
+            # ESTE COMANDO AINDA PODE FALHAR COM 401 SE O SPRING SECURITY ESTIVER BLOQUEANDO
+            curl -f http://localhost:8080/health || exit 1
