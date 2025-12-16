@@ -40,10 +40,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
-                                        HttpServletResponse response,
-                                        Authentication authentication) throws IOException {
+            HttpServletResponse response,
+            Authentication authentication) throws IOException {
 
-        // Suporta OIDC e OAuth2 “puro”
         Map<String, Object> attrs;
         Object principal = authentication.getPrincipal();
         if (principal instanceof OidcUser oidc) {
@@ -52,50 +51,53 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             attrs = oauth2.getAttributes();
         } else {
             writeJson(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                Map.of("error", "Unsupported principal type"));
+                    Map.of("error", "Unsupported principal type"));
             return;
         }
 
         final String email = (String) attrs.get("email");
         String tmpName = (String) attrs.get("name");
         if (tmpName == null || tmpName.isBlank()) {
-            String given  = (String) attrs.get("given_name");
+            String given = (String) attrs.get("given_name");
             String family = (String) attrs.get("family_name");
             tmpName = ((given != null ? given : "") + " " + (family != null ? family : "")).trim();
         }
         final String displayName = (tmpName == null || tmpName.isBlank()) ? email : tmpName;
 
-        // Cria usuário se não existir (role simples em minúsculas)
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             User u = new User();
             u.setEmail(email);
             u.setUsername(displayName);
-            u.setPassword("");   // social: sem senha local
+            u.setPassword("");
             u.setRole("user");
             return userRepository.save(u);
         });
 
-        // Gera JWT
         String token = jwtUtils.generateJwtToken(UserDetailsImpl.build(user), user.getUsername());
 
-        // Se a URL do front foi configurada, REDIRECIONA com o token.
-        if (frontendCallback != null && !frontendCallback.isBlank()) {
+        String finalRedirectUri = request.getParameter("redirect_uri");
+
+        if (finalRedirectUri == null || finalRedirectUri.isBlank()) {
+            finalRedirectUri = this.frontendCallback;
+        }
+
+        if (finalRedirectUri != null && !finalRedirectUri.isBlank()) {
             String target = UriComponentsBuilder
-                    .fromUriString(frontendCallback)               // ex.: http://localhost:5173/oauth/callback
-                    .queryParam("token", token)                     // ou .fragment("access_token=" + token)
+                    .fromUriString(finalRedirectUri)
+                    .queryParam("token", token)
                     .build()
                     .toUriString();
+
             response.sendRedirect(target);
             return;
         }
 
-        // Fallback: responde JSON (útil para testes manuais)
         writeJson(response, HttpServletResponse.SC_OK, Map.of(
-            "message", "Login com Google bem-sucedido",
-            "name", user.getUsername(),
-            "email", user.getEmail(),
-            "role", user.getRole(),
-            "token", token
+                "message", "Login com Google bem-sucedido",
+                "name", user.getUsername(),
+                "email", user.getEmail(),
+                "role", user.getRole(),
+                "token", token
         ));
     }
 
