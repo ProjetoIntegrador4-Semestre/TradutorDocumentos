@@ -4,7 +4,7 @@ Este relatório documenta a implementação de testes end-to-end (E2E) utilizand
 
 **Framework:** Cypress  
 **Aplicação Testada:** TranslatorPage (React + Material-UI)  
-**Ambiente:** `https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com`
+**Ambiente:** `https://develop.dosskyq5aktr1.amplifyapp.com`
 
 ---
 
