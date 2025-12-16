@@ -195,6 +195,12 @@ jobs:
               exit 1
             fi
             
+            # Instalar lsof se não estiver disponível (para verificar portas)
+            if ! command -v lsof &> /dev/null; then
+              echo "📦 Instalando lsof..."
+              sudo apt-get update -qq && sudo apt-get install -y lsof -qq 2>/dev/null || true
+            fi
+            
             echo "✅ Docker OK"
             
             # Puxar nova imagem
@@ -204,18 +210,47 @@ jobs:
             
             # Parar TODOS os containers do docker-compose
             echo ""
-            echo "🛑 Parando todos os containers antigos..."
-            docker-compose down || true
+            echo "🛑 Parando containers do docker-compose..."
+            docker-compose down -v 2>/dev/null || true
             
-            # Remover containers órfãos (containers com os mesmos nomes)
+            # Encontrar e parar TODOS os containers que usam as portas necessárias
             echo ""
-            echo "🧹 Removendo containers órfãos..."
+            echo "🔍 Verificando portas em uso..."
+            
+            # Parar containers que usam as portas
+            for port in 8080 5432 5000 5050 81 443; do
+              container_id=$(docker ps -q --filter "publish=$port")
+              if [ ! -z "$container_id" ]; then
+                echo "🛑 Parando container usando porta $port..."
+                docker stop $container_id 2>/dev/null || true
+                docker rm -f $container_id 2>/dev/null || true
+              fi
+            done
+            
+            # Remover containers específicos por nome (caso existam)
+            echo ""
+            echo "🧹 Removendo containers por nome..."
             docker rm -f translator-db libretranslate nginx-proxy-manager translator-pgadmin backend-java 2>/dev/null || true
+            
+            # Verificar se ainda há algo usando as portas (processos do sistema)
+            echo ""
+            echo "🔍 Verificando processos do sistema nas portas..."
+            for port in 8080 5432 5000 5050 81 443; do
+              pid=$(lsof -ti:$port 2>/dev/null || true)
+              if [ ! -z "$pid" ]; then
+                echo "⚠️  Aviso: Processo $pid ainda usando porta $port (não é um container Docker)"
+              fi
+            done
             
             # Limpar recursos não utilizados
             echo ""
-            echo "🧹 Limpando recursos não utilizados..."
-            docker system prune -f || true
+            echo "🧹 Limpando recursos Docker..."
+            docker system prune -af --volumes 2>/dev/null || true
+            
+            # Aguardar um pouco para garantir que as portas foram liberadas
+            echo ""
+            echo "⏳ Aguardando liberação de portas..."
+            sleep 5
             
             # Iniciar todos os serviços
             echo ""
