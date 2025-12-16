@@ -276,20 +276,31 @@ jobs:
             BACKEND_HEALTHY=false
             
             for i in {1..15}; do
-              # Tentar vários endpoints possíveis
-              if curl -f http://localhost:8080/actuator/health 2>/dev/null; then
-                BACKEND_HEALTHY=true
-                break
-              elif curl -f http://localhost:8080/health 2>/dev/null; then
-                BACKEND_HEALTHY=true
-                break
-              elif curl -s http://localhost:8080/ 2>/dev/null | grep -q "Whitelabel Error Page\|Tomcat"; then
-                # Se retornar página de erro do Spring/Tomcat, significa que está rodando
-                echo "✅ Backend está respondendo (página de erro significa que está ativo)"
+              # Tentar endpoint do actuator
+              RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health 2>/dev/null)
+              if [ "$RESPONSE" = "200" ]; then
+                echo "✅ Backend respondeu no /actuator/health"
                 BACKEND_HEALTHY=true
                 break
               fi
-              echo "⏳ Tentativa $i/15: Aguardando backend responder..."
+              
+              # Tentar endpoint /health
+              RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health 2>/dev/null)
+              if [ "$RESPONSE" = "200" ]; then
+                echo "✅ Backend respondeu no /health"
+                BACKEND_HEALTHY=true
+                break
+              fi
+              
+              # Tentar raiz da aplicação
+              RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ 2>/dev/null)
+              if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "404" ] || [ "$RESPONSE" = "403" ]; then
+                echo "✅ Backend está respondendo (HTTP $RESPONSE)"
+                BACKEND_HEALTHY=true
+                break
+              fi
+              
+              echo "⏳ Tentativa $i/15: Aguardando backend responder... (HTTP $RESPONSE)"
               sleep 5
             done
             
@@ -300,7 +311,8 @@ jobs:
                 echo "================================================"
                 echo ""
                 echo "🌐 Serviços disponíveis:"
-                echo "   - Backend: http://localhost:8080"
+                echo "   - Backend API: http://localhost:8080"
+                echo "   - Actuator: http://localhost:8080/actuator"
                 echo "   - PostgreSQL: localhost:5432"
                 echo "   - PgAdmin: http://localhost:5050"
                 echo "   - LibreTranslate: http://localhost:5000"
