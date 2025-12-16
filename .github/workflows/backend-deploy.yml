@@ -114,64 +114,52 @@ jobs:
   # JOB DEPLOY CORRIGIDO
   # =========================================================================
   deploy-to-ec2:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-    steps:
-      - uses: actions/checkout@v3
+  needs: build-and-push
+  runs-on: ubuntu-latest
+  if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+  steps:
+    - uses: actions/checkout@v3 # Faz o checkout do código no runner
       
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          # INÍCIO DO SCRIPT CORRIGIDO
-          script: |
-            set -e # Faz o script parar no primeiro erro de comando (ex: sed falhando)
+    - name: Deploy and Sync Files
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        
+        # Copia o arquivo docker-compose.yml da raiz do repo local (no runner)
+        # para o diretório de destino no EC2.
+        source: "docker-compose.yml" 
+        target: "/home/${{ secrets.EC2_USER }}/tradutor-documentos/"
+        
+        script: |
+          set -e # Continua parando em erros
 
-            # ================================================
-            # 1. SETUP DE DIRETÓRIOS E VARIÁVEIS DE AMBIENTE
-            # ================================================
-            # Usando variáveis separadas para segurança e clareza
-            TARGET_USER=${{ secrets.EC2_USER }}
-            TARGET_DIR="/home/$TARGET_USER/tradutor-documentos"
-            REPO_URL="https://github.com/ProjetoIntegrador4-Semestre/TradutorDocumentos.git"
-            DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-            DOCKER_IMAGE_TAG=${{ github.sha }}
-
-            # Cria o diretório (se não existir) e entra nele
-            mkdir -p $TARGET_DIR
-            cd $TARGET_DIR
-
-            # ================================================
-            # 2. CLONE OU PULL
-            # ================================================
-            if [ -d .git ]; then
-              echo "Atualizando repositório existente..."
-              # Usamos apenas o REBASE, que resolveu o problema de divergência no último log.
-              git pull --rebase origin develop 
-            else
-              echo "Clonando repositório..."
-              git clone $REPO_URL .
-            fi
-
-            # ================================================
-            # 3. DEPLOY DOCKER
-            # ================================================
-            # CORREÇÃO: Removido 'backendJava/' do caminho do docker-compose.yml
-            sed -i "s|image: .*tradutor-backend.*|image: $DOCKERHUB_USERNAME/tradutor-backend:latest|g" docker-compose.yml
-            
-            # Puxa a nova imagem
-            docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
-            
-            # CORREÇÃO: Reinicia os containers usando o caminho CORRETO
-            docker-compose -f docker-compose.yml down
-            docker-compose -f docker-compose.yml up -d
-            
-            # ================================================
-            # 4. VALIDAÇÃO
-            # ================================================
-            # Aguarda o container subir e valida se a API está respondendo
-            sleep 10
-            curl -f http://localhost:8080/health || exit 1
+          # ================================================
+          # 1. SETUP DE DIRETÓRIOS E VARIÁVEIS DE AMBIENTE
+          # ================================================
+          TARGET_USER=${{ secrets.EC2_USER }}
+          TARGET_DIR="/home/$TARGET_USER/tradutor-documentos"
+          DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+          
+          # Cria o diretório (se não existir). O 'source' acima já garante que o arquivo está aqui.
+          mkdir -p $TARGET_DIR
+          cd $TARGET_DIR
+          
+          # ================================================
+          # 2. DEPLOY DOCKER (O arquivo docker-compose.yml JÁ ESTÁ NO TARGET_DIR)
+          # ================================================
+          
+          # NOTA: O sed não é mais necessário aqui se você usar a tag ':latest' no docker-compose.yml
+          # Se o seu docker-compose.yml usa a tag :latest, este comando é suficiente:
+          docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
+          
+          # Reinicia os containers (o docker-compose.yml foi copiado via 'source')
+          docker-compose -f docker-compose.yml down
+          docker-compose -f docker-compose.yml up -d
+          
+          # ================================================
+          # 3. VALIDAÇÃO
+          # ================================================
+          sleep 10
+          curl -f http://localhost:8080/health || exit 1
