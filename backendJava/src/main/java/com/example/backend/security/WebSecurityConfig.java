@@ -76,6 +76,8 @@ public class WebSecurityConfig {
                 // Preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                .requestMatchers("/health", "/actuator/**").permitAll()
+
                 // Rotas públicas
                 .requestMatchers("/error").permitAll() // evita loop/500 na página de erro
                 .requestMatchers("/auth/password/**").permitAll()
