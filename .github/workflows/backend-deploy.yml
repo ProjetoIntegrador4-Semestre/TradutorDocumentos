@@ -91,21 +91,53 @@ jobs:
       - uses: actions/checkout@v3
       
       # =================================================
-      # CRIAR DIRETÓRIO NO EC2 PRIMEIRO
+      # PREPARAR AMBIENTE EC2
       # =================================================
-      - name: Create Target Directory on EC2
+      - name: Prepare EC2 Environment
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            mkdir -p /home/${{ secrets.EC2_USER }}/tradutor-documentos
+            # Criar diretórios necessários
+            mkdir -p /home/${{ secrets.EC2_USER }}/tradutor-documentos/data
+            mkdir -p /home/${{ secrets.EC2_USER }}/tradutor-documentos/letsencrypt
+            
+            # Criar arquivo .env com todas as variáveis
+            cat > /home/${{ secrets.EC2_USER }}/tradutor-documentos/.env << 'ENVEOF'
+            # Docker Hub
+            DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            
+            # Database
+            POSTGRES_USER=app
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            
+            # PgAdmin
+            PGADMIN_PASSWORD=${{ secrets.PGADMIN_PASSWORD }}
+            
+            # JWT
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            
+            # Google OAuth2
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
+            
+            # App Config
+            APP_BOOT_TOKEN=${{ secrets.APP_BOOT_TOKEN }}
+            APP_OAUTH2_REDIRECT_URI=${{ secrets.APP_OAUTH2_REDIRECT_URI }}
+            
+            # Spring Profile
+            SPRING_PROFILES_ACTIVE=prod
+            ENVEOF
+            
+            echo "✅ Ambiente preparado"
         
       # =================================================
-      # COPIAR DOCKER-COMPOSE.YML DA PASTA backendJava
+      # COPIAR DOCKER-COMPOSE.YML
       # =================================================
-      - name: Copy Docker Compose File via SCP
+      - name: Copy Docker Compose File
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -116,41 +148,142 @@ jobs:
           strip_components: 1
           
       # =================================================
-      # EXECUTAR COMANDOS DOCKER VIA SSH
+      # DEPLOY DA APLICAÇÃO
       # =================================================
-      - name: Execute Docker Commands via SSH
+      - name: Deploy Application
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          
           script: |
             set -e
-
-            TARGET_USER=${{ secrets.EC2_USER }}
-            TARGET_DIR="/home/$TARGET_USER/tradutor-documentos"
-            DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            
+            TARGET_DIR="/home/${{ secrets.EC2_USER }}/tradutor-documentos"
+            
+            echo "================================================"
+            echo "🚀 Iniciando Deploy do Backend"
+            echo "================================================"
             
             cd $TARGET_DIR
             
-            echo "🔄 Puxando nova imagem do Docker Hub..."
-            docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
-            
-            echo "🛑 Parando containers antigos..."
-            docker-compose -f docker-compose.yml down || true
-            
-            echo "🚀 Iniciando novos containers..."
-            docker-compose -f docker-compose.yml up -d
-            
-            echo "⏳ Aguardando aplicação inicializar..."
-            sleep 15
-            
-            echo "🔍 Verificando health check..."
-            if curl -f http://localhost:8080/health; then
-              echo "✅ Deploy realizado com sucesso!"
-            else
-              echo "❌ Health check falhou!"
-              docker-compose logs --tail=50
+            # Verificar arquivos
+            echo ""
+            echo "📋 Verificando arquivos necessários..."
+            if [ ! -f "docker-compose.yml" ]; then
+              echo "❌ docker-compose.yml não encontrado!"
               exit 1
             fi
+            
+            if [ ! -f ".env" ]; then
+              echo "❌ .env não encontrado!"
+              exit 1
+            fi
+            
+            echo "✅ Todos os arquivos encontrados"
+            
+            # Verificar Docker
+            echo ""
+            echo "🔍 Verificando Docker..."
+            if ! command -v docker &> /dev/null; then
+              echo "❌ Docker não instalado!"
+              exit 1
+            fi
+            
+            if ! command -v docker-compose &> /dev/null; then
+              echo "❌ Docker Compose não instalado!"
+              exit 1
+            fi
+            
+            echo "✅ Docker OK"
+            
+            # Puxar nova imagem
+            echo ""
+            echo "🔄 Puxando nova imagem do Docker Hub..."
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:latest
+            
+            # Parar apenas o backend (mantém DB e outros serviços)
+            echo ""
+            echo "🛑 Parando backend antigo..."
+            docker-compose stop backend || true
+            docker-compose rm -f backend || true
+            
+            # Limpar recursos não utilizados
+            echo ""
+            echo "🧹 Limpando recursos não utilizados..."
+            docker system prune -f || true
+            
+            # Iniciar todos os serviços
+            echo ""
+            echo "🚀 Iniciando serviços..."
+            docker-compose up -d
+            
+            # Aguardar inicialização
+            echo ""
+            echo "⏳ Aguardando serviços inicializarem..."
+            echo "   - PostgreSQL: ~10s"
+            echo "   - LibreTranslate: ~15s"
+            echo "   - Backend: ~60s"
+            sleep 60
+            
+            # Verificar status dos containers
+            echo ""
+            echo "📊 Status dos containers:"
+            docker-compose ps
+            
+            # Health check do backend
+            echo ""
+            echo "🔍 Verificando health check do backend..."
+            for i in {1..15}; do
+              if curl -f http://localhost:8080/health 2>/dev/null; then
+                echo ""
+                echo "================================================"
+                echo "✅ DEPLOY CONCLUÍDO COM SUCESSO!"
+                echo "================================================"
+                echo ""
+                echo "🌐 Serviços disponíveis:"
+                echo "   - Backend: http://localhost:8080"
+                echo "   - PostgreSQL: localhost:5432"
+                echo "   - PgAdmin: http://localhost:5050"
+                echo "   - LibreTranslate: http://localhost:5000"
+                echo "   - Nginx Proxy Manager: http://localhost:81"
+                echo ""
+                exit 0
+              fi
+              echo "⏳ Tentativa $i/15: Aguardando backend responder..."
+              sleep 5
+            done
+            
+            # Se chegou aqui, o health check falhou
+            echo ""
+            echo "❌ Health check do backend falhou!"
+            echo ""
+            echo "📋 Logs do Backend (últimas 100 linhas):"
+            docker-compose logs --tail=100 backend
+            echo ""
+            echo "📋 Logs do PostgreSQL (últimas 50 linhas):"
+            docker-compose logs --tail=50 db
+            echo ""
+            echo "📋 Logs do LibreTranslate (últimas 30 linhas):"
+            docker-compose logs --tail=30 libretranslate
+            exit 1
+      
+      # =================================================
+      # NOTIFICAÇÃO DE SUCESSO
+      # =================================================
+      - name: Deployment Success Notification
+        if: success()
+        run: |
+          echo "================================================"
+          echo "✅ DEPLOY REALIZADO COM SUCESSO!"
+          echo "================================================"
+          echo ""
+          echo "🌐 Acesse seus serviços:"
+          echo "   Backend API: http://${{ secrets.EC2_HOST }}:8080"
+          echo "   PgAdmin: http://${{ secrets.EC2_HOST }}:5050"
+          echo "   Nginx Proxy Manager: http://${{ secrets.EC2_HOST }}:81"
+          echo ""
+          echo "📝 Próximos passos:"
+          echo "   1. Configure o Nginx Proxy Manager"
+          echo "   2. Configure SSL com Let's Encrypt"
+          echo "   3. Teste as rotas da API"

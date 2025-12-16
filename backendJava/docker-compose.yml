@@ -1,7 +1,7 @@
-version: "3.9"
 services:
   app:
     image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginx-proxy-manager
     restart: unless-stopped
     ports:
       - '81:81'
@@ -9,51 +9,60 @@ services:
     volumes:
       - ./data:/data
       - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - tradutor-network
 
   libretranslate:
     image: libretranslate/libretranslate:latest
+    container_name: libretranslate
+    restart: unless-stopped
     ports:
       - "5000:5000"
     environment:
       LT_LOAD_ONLY: "en,pt,es,fr,de,it"
       LT_DISABLE_FILES: "true"
     command: ["--host", "0.0.0.0"]
+    networks:
+      - tradutor-network
 
   db:
     image: postgres:15
     container_name: translator-db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_DB: translator
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d translator"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d translator"]
+      interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - tradutor-network
 
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: translator-pgadmin
-    restart: always
+    restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
       - "5050:80"
     depends_on:
       - db
+    networks:
+      - tradutor-network
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME}/tradutor-backend:latest
     container_name: backend-java
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -66,8 +75,8 @@ services:
       # BANCO DE DADOS
       # ============================
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/translator
-      SPRING_DATASOURCE_USERNAME: app
-      SPRING_DATASOURCE_PASSWORD: app
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-app}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-app}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       
@@ -84,36 +93,49 @@ services:
       # ============================
       # JWT
       # ============================
-      JWT_SECRET: IntrMvLCt0wNl8AhgqtP017Y5vkvh4WgfLfsULHhN2MFAhjWcbKD5BXikOF7mf85UI
+      JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TOKEN_MINUTES: 60
       JWT_EXPIRATION: 3600000
       
       # ============================
       # GOOGLE OAUTH2
       # ============================
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID: 440964714329-kr38n86psbtkp8sn15f53vivh6o407ed.apps.googleusercontent.com
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET: 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
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_SCOPE: openid,profile,email
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: https://tradudoc.duckdns.org/login/oauth2/code/google
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://tradudoc.duckdns.org/login/oauth2/code/google}
       SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_NAME: Google
       
       # ============================
       # CONFIGURAÇÕES GERAIS
       # ============================
-      APP_BOOT_TOKEN: public-dev-boot-token-CHANGE_ME
-      APP_OAUTH2_REDIRECT_URI: https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com//oauth/callback
+      APP_BOOT_TOKEN: ${APP_BOOT_TOKEN:-public-dev-boot-token-CHANGE_ME}
+      APP_OAUTH2_REDIRECT_URI: ${APP_OAUTH2_REDIRECT_URI:-https://feature-integration-back-frontend.dosskyq5aktr1.amplifyapp.com/oauth/callback}
       APP_RESET_EXPMINUTES: 30
       APP_FRONTEND_RESET_PATH: /reset-password
       SERVER_FORWARD_HEADERS_STRATEGY: native
       SERVER_PORT: 8080
-      
-      # ============================
-      # LOGGING (OPCIONAL - DESCOMENTE SE PRECISAR DEBUG)
-      # ============================
-      # LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: DEBUG
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
     
     volumes:
-      - ../data:/app/data
+      - app-data:/app/data
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    networks:
+      - tradutor-network
 
 volumes:
   pgdata:
+    driver: local
+  app-data:
+    driver: local
+
+networks:
+  tradutor-network:
+    driver: bridge
