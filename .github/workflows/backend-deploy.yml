@@ -202,11 +202,15 @@ jobs:
             echo "🔄 Puxando nova imagem do Docker Hub..."
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:latest
             
-            # Parar apenas o backend (mantém DB e outros serviços)
+            # Parar TODOS os containers do docker-compose
             echo ""
-            echo "🛑 Parando backend antigo..."
-            docker-compose stop backend || true
-            docker-compose rm -f backend || true
+            echo "🛑 Parando todos os containers antigos..."
+            docker-compose down || true
+            
+            # Remover containers órfãos (containers com os mesmos nomes)
+            echo ""
+            echo "🧹 Removendo containers órfãos..."
+            docker rm -f translator-db libretranslate nginx-proxy-manager translator-pgadmin backend-java 2>/dev/null || true
             
             # Limpar recursos não utilizados
             echo ""
