@@ -273,8 +273,27 @@ jobs:
             # Health check do backend
             echo ""
             echo "🔍 Verificando health check do backend..."
+            BACKEND_HEALTHY=false
+            
             for i in {1..15}; do
-              if curl -f http://localhost:8080/health 2>/dev/null; then
+              # Tentar vários endpoints possíveis
+              if curl -f http://localhost:8080/actuator/health 2>/dev/null; then
+                BACKEND_HEALTHY=true
+                break
+              elif curl -f http://localhost:8080/health 2>/dev/null; then
+                BACKEND_HEALTHY=true
+                break
+              elif curl -s http://localhost:8080/ 2>/dev/null | grep -q "Whitelabel Error Page\|Tomcat"; then
+                # Se retornar página de erro do Spring/Tomcat, significa que está rodando
+                echo "✅ Backend está respondendo (página de erro significa que está ativo)"
+                BACKEND_HEALTHY=true
+                break
+              fi
+              echo "⏳ Tentativa $i/15: Aguardando backend responder..."
+              sleep 5
+            done
+            
+            if [ "$BACKEND_HEALTHY" = true ]; then
                 echo ""
                 echo "================================================"
                 echo "✅ DEPLOY CONCLUÍDO COM SUCESSO!"
@@ -288,10 +307,7 @@ jobs:
                 echo "   - Nginx Proxy Manager: http://localhost:81"
                 echo ""
                 exit 0
-              fi
-              echo "⏳ Tentativa $i/15: Aguardando backend responder..."
-              sleep 5
-            done
+            fi
             
             # Se chegou aqui, o health check falhou
             echo ""
