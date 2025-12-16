@@ -9,10 +9,9 @@ Este backend foi desenvolvido com **Spring Boot 3.5.5** e **Java 21**, oferecend
 - ✅ Autenticação JWT com suporte a OAuth2 (Google)
 - ✅ Tradução de documentos (PDF, DOCX, PPT)
 - ✅ Suporte a múltiplos idiomas
-- ✅ Armazenamento local de arquivos
 - ✅ API RESTful com Swagger/OpenAPI
 - ✅ Banco de dados PostgreSQL com Flyway
-- ✅ Integração com LibreTranslate e Google Cloud Translation
+- ✅ Integração com LibreTranslate
 
 ---
 
@@ -334,32 +333,6 @@ SPRING_MAIL_USERNAME=seu-email@gmail.com
 SPRING_MAIL_PASSWORD=sua-senha-app
 ```
 
-### application.properties
-
-```properties
-# Server
-server.port=8080
-server.servlet.context-path=/
-
-# JPA/Hibernate
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=false
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-
-# Flyway
-spring.flyway.enabled=true
-spring.flyway.locations=classpath:db/migration
-
-# JWT
-app.jwt.secret=${APP_JWT_SECRET:sua-chave-aqui}
-app.jwt.expirationMs=${APP_JWT_EXPIRATION_MS:86400000}
-
-# Arquivo
-spring.servlet.multipart.max-file-size=50MB
-spring.servlet.multipart.max-request-size=50MB
-```
-
----
 
 ## 🗄️ Banco de Dados
 
