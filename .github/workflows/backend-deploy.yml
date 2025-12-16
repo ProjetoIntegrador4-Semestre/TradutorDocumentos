@@ -6,6 +6,8 @@ on:
     paths: [ "backendJava/**", ".github/workflows/backend-deploy.yml" ]
 
 jobs:
+  # ... (O job build-and-test permanece inalterado)
+
   build-and-test:
     runs-on: ubuntu-latest
     
@@ -80,6 +82,8 @@ jobs:
         working-directory: ./backendJava
         run: mvn clean package -DskipTests
 
+  # ... (O job build-and-push permanece inalterado)
+
   build-and-push:
     needs: build-and-test
     runs-on: ubuntu-latest
@@ -106,6 +110,9 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/tradutor-backend:buildcache,mode=max
 
+  # =========================================================================
+  # JOB DEPLOY CORRIGIDO
+  # =========================================================================
   deploy-to-ec2:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -119,7 +126,10 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          # INÍCIO DO SCRIPT CORRIGIDO
           script: |
+            set -e # Faz o script parar no primeiro erro de comando (ex: sed falhando)
+
             # ================================================
             # 1. SETUP DE DIRETÓRIOS E VARIÁVEIS DE AMBIENTE
             # ================================================
@@ -139,8 +149,8 @@ jobs:
             # ================================================
             if [ -d .git ]; then
               echo "Atualizando repositório existente..."
-              # NOVO: Tenta fast-forward. Se falhar, tenta rebase (mais agressivo).
-              git pull --ff-only origin develop || git pull --rebase origin develop
+              # Usamos apenas o REBASE, que resolveu o problema de divergência no último log.
+              git pull --rebase origin develop 
             else
               echo "Clonando repositório..."
               git clone $REPO_URL .
