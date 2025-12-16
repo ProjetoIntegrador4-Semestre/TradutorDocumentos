@@ -119,46 +119,49 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          # INÍCIO DO SCRIPT CORRIGIDO
           script: |
-            # ================================================
-            # 1. SETUP DE DIRETÓRIOS E VARIÁVEIS DE AMBIENTE
-            # ================================================
-            TARGET_DIR="/home/${{ secrets.EC2_USER }}/tradutor-documentos"
-            REPO_URL="https://github.com/ProjetoIntegrador4-Semestre/TradutorDocumentos.git"
-            DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-            DOCKER_IMAGE_TAG=${{ github.sha }}
+            # ================================================
+            # 1. SETUP DE DIRETÓRIOS E VARIÁVEIS DE AMBIENTE
+            # ================================================
+            # Define variáveis de shell usando a sintaxe segura
+            TARGET_USER=${{ secrets.EC2_USER }}
+            TARGET_DIR="/home/$TARGET_USER/tradutor-documentos"
+            REPO_URL="https://github.com/ProjetoIntegrador4-Semestre/TradutorDocumentos.git"
+            DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            DOCKER_IMAGE_TAG=${{ github.sha }}
 
-            # Cria o diretório (se não existir) e entra nele
-            mkdir -p $TARGET_DIR
-            cd $TARGET_DIR
+            # Cria o diretório (se não existir) e entra nele
+            mkdir -p $TARGET_DIR
+            cd $TARGET_DIR
 
-            # ================================================
-            # 2. CLONE OU PULL
-            # ================================================
-            if [ -d .git ]; then
-              echo "Atualizando repositório existente..."
-              git pull origin ${{ github.ref_name }} # Usa a branch atual
-            else
-              echo "Clonando repositório..."
-              git clone $REPO_URL .
-            fi
+            # ================================================
+            # 2. CLONE OU PULL
+            # ================================================
+            if [ -d .git ]; then
+              echo "Atualizando repositório existente..."
+              git pull origin ${{ github.ref_name }} # Usa a branch atual
+            else
+              echo "Clonando repositório..."
+              git clone $REPO_URL .
+            fi
 
-            # ================================================
-            # 3. DEPLOY DOCKER
-            # ================================================
-            # Substitui a tag da imagem no docker-compose
-            sed -i "s|image: .*tradutor-backend.*|image: $DOCKERHUB_USERNAME/tradutor-backend:latest|g" backendJava/docker-compose.yml
-            
-            # Puxa a nova imagem
-            docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
-            
-            # Reinicia os containers usando o arquivo de configuração
-            docker-compose -f backendJava/docker-compose.yml down
-            docker-compose -f backendJava/docker-compose.yml up -d
-            
-            # ================================================
-            # 4. VALIDAÇÃO
-            # ================================================
-            # Aguarda o container subir e valida se a API está respondendo
-            sleep 10
-            curl -f http://localhost:8080/health || exit 1
+            # ================================================
+            # 3. DEPLOY DOCKER
+            # ================================================
+            # Substitui a tag da imagem no docker-compose
+            sed -i "s|image: .*tradutor-backend.*|image: $DOCKERHUB_USERNAME/tradutor-backend:latest|g" backendJava/docker-compose.yml
+            
+            # Puxa a nova imagem
+            docker pull $DOCKERHUB_USERNAME/tradutor-backend:latest
+            
+            # Reinicia os containers usando o arquivo de configuração
+            docker-compose -f backendJava/docker-compose.yml down
+            docker-compose -f backendJava/docker-compose.yml up -d
+            
+            # ================================================
+            # 4. VALIDAÇÃO
+            # ================================================
+            # Aguarda o container subir e valida se a API está respondendo
+            sleep 10
+            curl -f http://localhost:8080/health || exit 1
