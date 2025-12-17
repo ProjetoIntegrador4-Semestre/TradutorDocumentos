@@ -210,19 +210,6 @@ npm run lint         # Executa ESLint para verificar código
 
 ## 🧪 Testes
 
-### Testes Unitários (Vitest)
-
-```bash
-# Executar todos os testes
-npm run test
-
-# Modo interativo com UI
-npm run test:ui
-
-# Modo watch (re-executa ao salvar)
-npm run test:watch
-```
-
 ### Testes E2E (Cypress)
 
 ```bash
