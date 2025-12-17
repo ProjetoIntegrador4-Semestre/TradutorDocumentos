@@ -403,6 +403,7 @@ mvn test
 
 - `UserRepositoryTest.java` - Testes do repositório de usuários
 - `TranslationServiceTest.java` - Testes do serviço de tradução (quando disponível)
+- `JwtUtilsTest.java` - Testes JWT
 
 ### Perfil de Teste
 
@@ -499,47 +500,6 @@ Usuário → POST /api/auth/signin → JwtUtils gera token → Response com JWT
 
 ---
 
-## 🐛 Troubleshooting
-
-### Erro: "Failed to connect to database"
-- Verificar se PostgreSQL está rodando
-- Confirmar credenciais em `application.properties`
-- Se usar Docker Compose: `docker-compose logs db`
-
-### Erro: "JWT signature does not match"
-- JWT secret não coincide entre requisição e configuração
-- Verificar `APP_JWT_SECRET` nas variáveis de ambiente
-
-### Erro: "File upload size exceeds maximum"
-- Aumentar `spring.servlet.multipart.max-file-size` em `application.properties`
-
-### Erro: "LibreTranslate not reachable"
-- Verificar se serviço está rodando: `docker-compose ps`
-- Confirmar URL em `LIBRE_BASE_URL`
-
----
-
-## 📦 Build e Deploy
-
-### Build JAR
-
-```bash
-mvn clean package
-```
-
-Gera: `target/authserver-0.0.1-SNAPSHOT.jar`
-
-### Deploy em Produção
-
-```bash
-# Com Docker Compose
-docker-compose -f docker-compose.prod.yml up -d
-
-# Ou com JAR
-java -jar authserver-0.0.1-SNAPSHOT.jar \
-  --spring.profiles.active=prod \
-  --SPRING_DATASOURCE_URL=jdbc:postgresql://prod-db:5432/translator
-```
 
 ---
 
