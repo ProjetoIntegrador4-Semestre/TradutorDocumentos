@@ -69,11 +69,6 @@ O **Doc Translator Web** é uma aplicação frontend que permite aos usuários f
 - **Cypress 15.7.1** - Testes E2E (end-to-end)
   - `cypress-file-upload` - Plugin para upload de arquivos nos testes
 
-### Qualidade de Código
-- **ESLint 9.33.0** - Linter para JavaScript/TypeScript
-  - `eslint-plugin-react-hooks` - Regras para React Hooks
-  - `eslint-plugin-react-refresh` - Regras para Fast Refresh
-
 ### Ambiente de Desenvolvimento
 - **Vite Plugin React 5.0.0** - Plugin oficial do React para Vite
 
