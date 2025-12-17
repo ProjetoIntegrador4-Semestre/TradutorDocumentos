@@ -1,0 +1,53 @@
+/* main.css - Layout básico do relatório */
+
+/* Definindo as margens e o padding */
+body {
+    background-color: #f4faff;
+    font-family: Arial, sans-serif;
+    color: #444;
+    margin: 0;
+    padding: 0;
+}
+
+/* Cabeçalho */
+header {
+    background-color: #00549e;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin: 0;
+}
+
+/* Estilo para seções */
+section {
+    margin: 20px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilo para tabelas */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+th {
+    background-color: #00549e;
+    color: white;
+    padding: 10px;
+}
+
+td {
+    padding: 10px;
+}

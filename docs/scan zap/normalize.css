@@ -1,0 +1,29 @@
+/* normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */
+
+/* 1. Reset box-sizing and line-height for all elements */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    line-height: 1.15;
+}
+
+/* 2. Default styles for the body */
+body {
+    margin: 0;
+    font-family: sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+
+/* 3. Set up HTML5 elements for proper rendering */
+article, aside, details, figcaption, figure, footer, header, hgroup, main, nav, section {
+    display: block;
+}
+
+/* 4. Improve forms and inputs */
+input, button, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
