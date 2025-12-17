@@ -17,7 +17,7 @@ export default function ProtectedRoute({
   const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return null; // ou um spinner se preferir
+  if (loading) return null;
 
   if (!isAuthenticated) {
     return <Navigate to={fallbackPath} replace state={{ from: location }} />;
